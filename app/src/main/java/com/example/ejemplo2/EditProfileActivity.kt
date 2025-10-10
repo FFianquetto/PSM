@@ -3,6 +3,7 @@ package com.example.ejemplo2
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
+import android.view.View
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
@@ -119,6 +120,9 @@ class EditProfileActivity : AppCompatActivity() {
         testBtn?.setOnClickListener {
             testConnectivity()
         }
+        
+        // Configurar navegación inferior
+        setupBottomNavigation()
     }
     
     private fun loadUserData() {
@@ -402,6 +406,43 @@ class EditProfileActivity : AppCompatActivity() {
             // Mover cursor al final
             editText.setSelection(editText.text.length)
             isPasswordVisible = !isPasswordVisible
+        }
+    }
+    
+    /**
+     * Configura la navegación inferior
+     */
+    private fun setupBottomNavigation() {
+        // Botón Inicio (navegar a MainActivity)
+        val homeButton = findViewById<View>(R.id.homeButton)
+        homeButton.setOnClickListener {
+            val intent = Intent(this, MainActivity::class.java)
+            intent.putExtra("user_id", currentUserId)
+            startActivity(intent)
+        }
+
+        // Botón Crear (navegar a CreateRecipeActivity)
+        val createButton = findViewById<View>(R.id.createButton)
+        createButton.setOnClickListener {
+            if (currentUserId != -1L) {
+                val intent = Intent(this, CreateRecipeActivity::class.java)
+                intent.putExtra("user_id", currentUserId)
+                startActivity(intent)
+            } else {
+                Toast.makeText(this, "Debes iniciar sesión para crear recetas", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // Botón Perfil (navegar a ProfileActivity)
+        val profileButton = findViewById<View>(R.id.profileButton)
+        profileButton.setOnClickListener {
+            if (currentUserId != -1L) {
+                val intent = Intent(this, ProfileActivity::class.java)
+                intent.putExtra("user_id", currentUserId)
+                startActivity(intent)
+            } else {
+                Toast.makeText(this, "Debes iniciar sesión para ver tu perfil", Toast.LENGTH_SHORT).show()
+            }
         }
     }
 }

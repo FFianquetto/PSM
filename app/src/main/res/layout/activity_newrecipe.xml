@@ -72,7 +72,10 @@
                 android:background="@drawable/rounded_background"
                 android:hint="Nombre de la receta"
                 android:padding="16dp"
-                android:textSize="16sp"
+                android:textSize="18sp"
+                android:textColor="@android:color/white"
+                android:textColorHint="@android:color/white"
+                android:textStyle="bold"
                 android:fontFamily="@font/natasans" />
 
             <!-- Ingredientes -->
@@ -99,7 +102,10 @@
                     android:background="@drawable/rounded_background"
                     android:hint="Ingrediente"
                     android:padding="16dp"
-                    android:textSize="16sp"
+                    android:textSize="18sp"
+                    android:textColor="@android:color/white"
+                    android:textColorHint="@android:color/white"
+                    android:textStyle="bold"
                     android:fontFamily="@font/natasans" />
             </LinearLayout>
 
@@ -136,7 +142,10 @@
                 android:background="@drawable/rounded_background"
                 android:hint="Describe los pasos de preparación..."
                 android:padding="16dp"
-                android:textSize="16sp"
+                android:textSize="18sp"
+                android:textColor="@android:color/white"
+                android:textColorHint="@android:color/white"
+                android:textStyle="bold"
                 android:fontFamily="@font/natasans"
                 android:gravity="top"
                 android:inputType="textMultiLine" />
@@ -324,5 +333,331 @@
                 android:layout_marginTop="6dp" />
         </LinearLayout>
     </LinearLayout>
+
+</LinearLayout>
+
+                    android:layout_width="48dp"
+
+                    android:layout_height="48dp"
+
+                    android:src="@drawable/ic_add_photo"
+
+                    android:contentDescription="Añadir foto"
+
+                    app:tint="#666666" />
+
+
+
+                <TextView
+
+                    android:layout_width="wrap_content"
+
+                    android:layout_height="wrap_content"
+
+                    android:text="Añadir foto"
+
+                    android:textColor="#666666"
+
+                    android:textSize="16sp"
+
+                    android:fontFamily="@font/natasans"
+
+                    android:layout_marginTop="12dp" />
+
+            </LinearLayout>
+
+
+
+            <LinearLayout
+
+                android:layout_width="match_parent"
+
+                android:layout_height="wrap_content"
+
+                android:orientation="horizontal"
+
+                android:layout_marginTop="20dp"
+
+                android:weightSum="2"
+
+                android:gravity="center">
+
+
+
+                <!-- Botón Borrador -->
+
+                <Button
+
+                    android:id="@+id/draftButton"
+
+                    android:layout_width="0dp"
+
+                    android:layout_height="wrap_content"
+
+                    android:layout_weight="1"
+
+                    android:layout_marginStart="8dp"
+
+                    android:layout_marginEnd="4dp"
+
+                    android:text="Borrador"
+
+                    android:textSize="18sp"
+
+                    android:textColor="@color/primary_blue"
+
+                    android:background="@drawable/button_border_blue"
+
+                    android:fontFamily="@font/natasans"
+
+                    android:textStyle="bold"
+
+                    android:elevation="6dp"
+
+                    android:padding="16dp" />
+
+
+
+                <!-- Botón Publicar -->
+
+                <Button
+
+                    android:id="@+id/publishButton"
+
+                    android:layout_width="0dp"
+
+                    android:layout_height="wrap_content"
+
+                    android:layout_weight="1"
+
+                    android:layout_marginStart="4dp"
+
+                    android:layout_marginEnd="8dp"
+
+                    android:text="Publicar"
+
+                    android:textSize="18sp"
+
+                    android:textColor="@android:color/white"
+
+                    android:backgroundTint="@color/vibrant_orange"
+
+                    android:fontFamily="@font/natasans"
+
+                    android:textStyle="bold"
+
+                    android:elevation="6dp"
+
+                    android:padding="16dp" />
+
+
+
+            </LinearLayout>
+
+
+
+        </LinearLayout>
+
+    </ScrollView>
+
+
+
+    <!-- Navbar en el footer -->
+
+    <LinearLayout
+
+        android:layout_width="match_parent"
+
+        android:layout_height="80dp"
+
+        android:orientation="horizontal"
+
+        android:background="@color/primary_blue"
+
+        android:gravity="center">
+
+
+
+        <!-- Inicio -->
+
+        <LinearLayout
+
+            android:id="@+id/homeButton"
+
+            android:layout_width="0dp"
+
+            android:layout_height="match_parent"
+
+            android:layout_weight="1"
+
+            android:orientation="vertical"
+
+            android:gravity="center"
+
+            android:clickable="true"
+
+            android:focusable="true"
+
+            android:background="?attr/selectableItemBackground">
+
+
+
+            <ImageView
+
+                android:layout_width="28dp"
+
+                android:layout_height="28dp"
+
+                android:src="@drawable/ic_home"
+
+                android:contentDescription="Inicio"
+
+                app:tint="@android:color/white" />
+
+
+
+            <TextView
+
+                android:layout_width="wrap_content"
+
+                android:layout_height="wrap_content"
+
+                android:text="Inicio"
+
+                android:textColor="@android:color/white"
+
+                android:textSize="14sp"
+
+                android:textStyle="bold"
+
+                android:fontFamily="@font/natasans"
+
+                android:layout_marginTop="6dp" />
+
+        </LinearLayout>
+
+
+
+        <!-- Crear publicación (activo) -->
+
+        <LinearLayout
+
+            android:id="@+id/createButton"
+
+            android:layout_width="0dp"
+
+            android:layout_height="match_parent"
+
+            android:layout_weight="1"
+
+            android:orientation="vertical"
+
+            android:gravity="center"
+
+            android:clickable="true"
+
+            android:focusable="true"
+
+            android:background="?attr/selectableItemBackground">
+
+
+
+            <ImageView
+
+                android:layout_width="36dp"
+
+                android:layout_height="36dp"
+
+                android:src="@drawable/ic_add"
+
+                android:contentDescription="Crear"
+
+                app:tint="@color/vibrant_orange" />
+
+
+
+            <TextView
+
+                android:layout_width="wrap_content"
+
+                android:layout_height="wrap_content"
+
+                android:text="Crear"
+
+                android:textColor="@color/vibrant_orange"
+
+                android:textSize="14sp"
+
+                android:textStyle="bold"
+
+                android:fontFamily="@font/natasans"
+
+                android:layout_marginTop="6dp" />
+
+        </LinearLayout>
+
+
+
+        <!-- Perfil -->
+
+        <LinearLayout
+
+            android:id="@+id/profileButton"
+
+            android:layout_width="0dp"
+
+            android:layout_height="match_parent"
+
+            android:layout_weight="1"
+
+            android:orientation="vertical"
+
+            android:gravity="center"
+
+            android:clickable="true"
+
+            android:focusable="true"
+
+            android:background="?attr/selectableItemBackground">
+
+
+
+            <ImageView
+
+                android:layout_width="28dp"
+
+                android:layout_height="28dp"
+
+                android:src="@drawable/ic_profile"
+
+                android:contentDescription="Perfil"
+
+                app:tint="@android:color/white" />
+
+
+
+            <TextView
+
+                android:layout_width="wrap_content"
+
+                android:layout_height="wrap_content"
+
+                android:text="Perfil"
+
+                android:textColor="@android:color/white"
+
+                android:textSize="14sp"
+
+                android:textStyle="bold"
+
+                android:fontFamily="@font/natasans"
+
+                android:layout_marginTop="6dp" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+
 
 </LinearLayout>

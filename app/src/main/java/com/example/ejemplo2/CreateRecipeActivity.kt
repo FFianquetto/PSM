@@ -117,11 +117,16 @@ class CreateRecipeActivity : AppCompatActivity() {
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
                 setMargins(0, 8, 0, 8)
+                // Asegurar que tenga la misma altura mínima que el campo original
+                minimumHeight = 56 // dp convertido a pixels (aproximadamente)
             }
             hint = "Ingrediente"
-            setPadding(12, 12, 12, 12)
-            setTextSize(14f)
+            setPadding(16, 16, 16, 16) // Mismo padding que el campo inicial
+            setTextSize(18f) // Tamaño más grande para mejor legibilidad
+            setTypeface(resources.getFont(R.font.natasans), android.graphics.Typeface.BOLD) // Fuente en negrita
             setBackgroundResource(R.drawable.rounded_background)
+            setTextColor(android.graphics.Color.WHITE) // Texto blanco para contraste
+            setHintTextColor(android.graphics.Color.WHITE) // Placeholder blanco
         }
         container.addView(ingredientField)
     }

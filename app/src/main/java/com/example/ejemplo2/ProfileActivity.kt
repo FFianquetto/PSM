@@ -81,6 +81,9 @@ class ProfileActivity : AppCompatActivity() {
             startActivity(intent)
             finish()
         }
+        
+        // Configurar navegación inferior
+        setupBottomNavigation()
     }
     
     private fun loadUserData() {
@@ -310,5 +313,37 @@ class ProfileActivity : AppCompatActivity() {
         val intent = Intent(this, RecipeDetailActivity::class.java)
         intent.putExtra("recipe_id", recipe.id)
         startActivity(intent)
+    }
+    
+    /**
+     * Configura la navegación inferior
+     */
+    private fun setupBottomNavigation() {
+        // Botón Inicio (navegar a MainActivity)
+        val homeButton = findViewById<View>(R.id.homeButton)
+        homeButton.setOnClickListener {
+            val intent = Intent(this, MainActivity::class.java)
+            intent.putExtra("user_id", currentUserId)
+            startActivity(intent)
+        }
+
+        // Botón Crear (navegar a CreateRecipeActivity)
+        val createButton = findViewById<View>(R.id.createButton)
+        createButton.setOnClickListener {
+            if (currentUserId != -1L) {
+                val intent = Intent(this, CreateRecipeActivity::class.java)
+                intent.putExtra("user_id", currentUserId)
+                startActivity(intent)
+            } else {
+                Toast.makeText(this, "Debes iniciar sesión para crear recetas", Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        // Botón Perfil (ya estamos en esta pantalla)
+        val profileButton = findViewById<View>(R.id.profileButton)
+        profileButton.setOnClickListener {
+            Toast.makeText(this, "Ya estás en tu perfil", Toast.LENGTH_SHORT).show()
+            // Ya estamos en la pantalla de perfil, no hacer nada
+        }
     }
 }
