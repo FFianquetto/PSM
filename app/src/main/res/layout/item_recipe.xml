@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.cardview.widget.CardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="8dp"
+    app:cardCornerRadius="12dp"
+    app:cardElevation="4dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="16dp">
+
+        <!-- Título y autor -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:layout_marginBottom="8dp">
+
+            <TextView
+                android:id="@+id/recipeTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Título de la receta"
+                android:textColor="@android:color/black"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/natasans"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+            <TextView
+                android:id="@+id/recipeAuthor"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@autor"
+                android:textColor="#666666"
+                android:textSize="14sp"
+                android:fontFamily="@font/natasans"
+                android:layout_marginTop="2dp" />
+        </LinearLayout>
+
+        <!-- Etiquetas -->
+        <TextView
+            android:id="@+id/recipeTags"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Etiquetas"
+            android:textColor="@color/primary_blue"
+            android:textSize="12sp"
+            android:fontFamily="@font/natasans"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Tiempo y valoración -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/recipeTime"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="30 min"
+                android:textColor="@android:color/black"
+                android:textSize="14sp"
+                android:fontFamily="@font/natasans"
+                android:drawableStart="@drawable/ic_time"
+                android:drawablePadding="4dp"
+                android:gravity="center_vertical" />
+
+            <View
+                android:layout_width="1dp"
+                android:layout_height="16dp"
+                android:layout_marginHorizontal="12dp"
+                android:background="#DDDDDD" />
+
+            <RatingBar
+                android:id="@+id/recipeRating"
+                style="?android:attr/ratingBarStyleSmall"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:numStars="5"
+                android:rating="4"
+                android:stepSize="0.5"
+                android:isIndicator="true" />
+
+            <TextView
+                android:id="@+id/ratingValue"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="4.0"
+                android:textColor="@android:color/black"
+                android:textSize="14sp"
+                android:fontFamily="@font/natasans"
+                android:layout_marginStart="4dp" />
+        </LinearLayout>
+    </LinearLayout>
+</androidx.cardview.widget.CardView>

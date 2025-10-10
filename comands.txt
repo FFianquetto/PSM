@@ -1,0 +1,4 @@
+Debes abrir xampp, correr apache y MySQL 
+Abres workbench y ejecutas los comandos:
+cd api
+php -S 0.0.0.0:8000

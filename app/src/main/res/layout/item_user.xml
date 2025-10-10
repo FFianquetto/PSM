@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:layout_margin="8dp"
+    android:background="@drawable/rounded_background"
+    android:backgroundTint="@color/light_gray"
+    android:elevation="2dp">
+
+    <!-- Nombre del usuario -->
+    <TextView
+        android:id="@+id/textViewUserName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Juan Pérez"
+        android:textColor="@color/black"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:fontFamily="@font/natasans"
+        android:layout_marginBottom="4dp"/>
+
+    <!-- Email -->
+    <TextView
+        android:id="@+id/textViewUserEmail"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="juan@ejemplo.com"
+        android:textColor="@color/black"
+        android:textSize="14sp"
+        android:fontFamily="@font/natasans"
+        android:layout_marginBottom="4dp"/>
+
+    <!-- Alias -->
+    <TextView
+        android:id="@+id/textViewUserAlias"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="@juanperez"
+        android:textColor="@color/vibrant_orange"
+        android:textSize="14sp"
+        android:textStyle="italic"
+        android:fontFamily="@font/natasans"
+        android:layout_marginBottom="4dp"/>
+
+    <!-- Fecha de registro -->
+    <TextView
+        android:id="@+id/textViewRegistrationDate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Registrado: 15/12/2024"
+        android:textColor="@color/light_gray"
+        android:textSize="12sp"
+        android:fontFamily="@font/natasans"/>
+
+</LinearLayout>

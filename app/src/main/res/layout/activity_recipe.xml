@@ -1,0 +1,288 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/main"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fitsSystemWindows="true"
+    tools:context=".RecipeActivity">
+
+    <!-- AppBarLayout para la sección fija superior -->
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/app_bar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:fitsSystemWindows="true"
+        android:background="#6AB6CB">
+
+        <com.google.android.material.appbar.CollapsingToolbarLayout
+            android:id="@+id/collapsing_toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:fitsSystemWindows="true"
+            app:contentScrim="#6AB6CB"
+            app:layout_scrollFlags="scroll|exitUntilCollapsed"
+            app:expandedTitleMarginStart="48dp"
+            app:expandedTitleMarginEnd="64dp">
+
+            <!-- Contenedor para la imagen y botón de regreso -->
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="200dp"
+                app:layout_collapseMode="parallax">
+
+                <!-- Imagen de comida (más pequeña) -->
+                <ImageView
+                    android:id="@+id/imageViewFood"
+                    android:layout_width="150dp"
+                    android:layout_height="150dp"
+                    android:layout_centerInParent="true"
+                    android:src="@drawable/logo"
+                    android:contentDescription="Imagen de comida"
+                    android:background="@drawable/rounded_background"
+                    android:padding="8dp"/>
+
+                <!-- Botón de regreso con icono -->
+                <ImageButton
+                    android:id="@+id/buttonBack"
+                    android:layout_width="56dp"
+                    android:layout_height="56dp"
+                    android:layout_margin="20dp"
+                    android:src="@drawable/ic_arrow_back"
+                    android:contentDescription="Volver atrás"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    app:tint="@color/white"/>
+
+                <!-- Icono de corazón, para poderlo agregar a favoritos -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:layout_margin="20dp"
+                    android:text="❤"
+                    android:textColor="#FFFFFF"
+                    android:textSize="28sp"/>
+            </RelativeLayout>
+
+        </com.google.android.material.appbar.CollapsingToolbarLayout>
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <!-- NestedScrollView para el contenido desplazable -->
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"
+        android:layout_marginBottom="80dp"> <!-- Margen inferior para que no quede oculto por los botones fijos -->
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:paddingTop="20dp">
+
+            <!-- Sección inferior: Tarjeta blanca con detalles de receta -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="#FFFFFF"
+                android:orientation="vertical"
+                android:padding="28dp"
+                android:layout_margin="20dp"
+                android:elevation="8dp">
+
+                <!-- Título y autor -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="20dp">
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/textViewTitle"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Título"
+                            android:textColor="#6AB6CB"
+                            android:textSize="28sp"
+                            android:textStyle="bold"
+                            android:fontFamily="@font/natasans"
+                            android:layout_marginBottom="6dp"/>
+
+                        <TextView
+                            android:id="@+id/textViewAuthor"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="Por x autor"
+                            android:textColor="#6AB6CB"
+                            android:textSize="18sp"
+                            android:textStyle="bold"
+                            android:fontFamily="@font/natasans"/>
+                    </LinearLayout>
+
+                    <!-- Tiempo y calificación -->
+                    <LinearLayout
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical"
+                        android:background="@drawable/rounded_background"
+                        android:padding="16dp"
+                        android:backgroundTint="@color/vibrant_orange"
+                        android:elevation="6dp">
+
+                        <TextView
+                            android:id="@+id/textViewTime"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="⏰ XX min"
+                            android:textColor="@color/white"
+                            android:textSize="16sp"
+                            android:textStyle="bold"
+                            android:layout_marginBottom="6dp"/>
+
+                        <TextView
+                            android:id="@+id/textViewRating"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="⭐ calificación"
+                            android:textColor="@color/white"
+                            android:textSize="16sp"
+                            android:textStyle="bold"/>
+                    </LinearLayout>
+                </LinearLayout>
+
+                <!-- Sección de ingredientes -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Ingredientes ¿Para cuántas Personas?"
+                    android:textColor="#6AB6CB"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:fontFamily="@font/natasans"
+                    android:layout_marginBottom="16dp"/>
+
+                <TextView
+                    android:id="@+id/textViewIngredients"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="• Ingrediente 1\n• Ingrediente 2\n• Ingrediente 3"
+                    android:textColor="#6AB6CB"
+                    android:textSize="18sp"
+                    android:layout_marginBottom="24dp"
+                    android:background="@drawable/rounded_background"
+                    android:padding="20dp"
+                    android:backgroundTint="#6AB6CB"/>
+
+                <!-- Sección de instrucciones -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="¡A cocinar!"
+                    android:textColor="#6AB6CB"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:fontFamily="@font/natasans"
+                    android:layout_marginBottom="10dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Subtítulo con la acción a realizar"
+                    android:textColor="#6AB6CB"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:fontFamily="@font/natasans"
+                    android:layout_marginBottom="16dp"/>
+
+                <TextView
+                    android:id="@+id/textViewInstructions"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="1. Paso 1\n2. Paso 2\n3. Paso 3"
+                    android:textColor="#6AB6CB"
+                    android:textSize="18sp"
+                    android:layout_marginBottom="24dp"
+                    android:background="@drawable/rounded_background"
+                    android:padding="20dp"
+                    android:backgroundTint="#6AB6CB"/>
+
+                <!-- Sección de comentarios -->
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Comentarios"
+                    android:textColor="#6AB6CB"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:fontFamily="@font/natasans"
+                    android:layout_marginBottom="16dp"/>
+
+                <TextView
+                    android:id="@+id/textViewComments"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Aquí se puntuarán las recetas"
+                    android:textColor="#6AB6CB"
+                    android:textSize="18sp"
+                    android:background="@drawable/rounded_background"
+                    android:padding="20dp"
+                    android:backgroundTint="#6AB6CB"
+                    android:minHeight="80dp"
+                    android:gravity="center_vertical"/>
+
+            </LinearLayout>
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Contenedor para los botones fijos en la parte inferior -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:background="@android:color/white"
+        android:elevation="12dp"
+        android:layout_gravity="bottom"
+        android:padding="20dp"
+        app:layout_behavior="com.google.android.material.behavior.HideBottomViewOnScrollBehavior">
+
+        <!-- Botón Borrador -->
+        <Button
+            android:id="@+id/draftButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginEnd="10dp"
+            android:text="Borrador"
+            android:textSize="18sp"
+            android:textColor="@color/primary_blue"
+            android:background="@drawable/button_border_blue"
+            android:fontFamily="@font/natasans"
+            android:textStyle="bold"
+            android:elevation="6dp"
+            android:padding="16dp" />
+
+        <!-- Botón Publicar -->
+        <Button
+            android:id="@+id/publishButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="10dp"
+            android:text="Publicar"
+            android:textSize="18sp"
+            android:textColor="@android:color/white"
+            android:backgroundTint="@color/vibrant_orange"
+            android:fontFamily="@font/natasans"
+            android:textStyle="bold"
+            android:elevation="6dp"
+            android:padding="16dp" />
+    </LinearLayout>
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

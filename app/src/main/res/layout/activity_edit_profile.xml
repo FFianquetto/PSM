@@ -1,0 +1,389 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    android:id="@+id/main"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/primary_blue"
+    tools:context=".EditProfileActivity">
+
+    <!-- Sección superior: Logo y título -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/white"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <ImageView
+            android:id="@+id/logoImage"
+            android:layout_width="300dp"
+            android:layout_height="100dp"
+            android:src="@drawable/logo"
+            android:scaleType="fitCenter"
+            android:contentDescription="logo"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Editar Perfil"
+            android:textColor="@color/black"
+            android:textSize="24sp"
+            android:textStyle="bold"
+            android:fontFamily="@font/natasans"
+            android:layout_marginTop="10dp"/>
+    </LinearLayout>
+
+    <!-- Formulario de edición -->
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true"
+        android:padding="20dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Avatar Section -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:gravity="center"
+                android:layout_marginBottom="20dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Foto de perfil"
+                    android:textColor="@color/black"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:fontFamily="@font/natasans"
+                    android:layout_marginBottom="8dp"/>
+
+                <ImageView
+                    android:id="@+id/avatarImageView"
+                    android:layout_width="100dp"
+                    android:layout_height="100dp"
+                    android:background="@drawable/rounded_background"
+                    android:backgroundTint="@color/white"
+                    android:src="@android:drawable/ic_menu_camera"
+                    android:scaleType="centerInside"
+                    android:padding="16dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:contentDescription="Avatar"/>
+
+                <TextView
+                    android:id="@+id/selectAvatarText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Toca para cambiar"
+                    android:textColor="@color/vibrant_orange"
+                    android:textSize="12sp"
+                    android:fontFamily="@font/natasans"
+                    android:layout_marginTop="4dp"
+                    android:clickable="true"
+                    android:focusable="true"/>
+            </LinearLayout>
+
+            <!-- Nombre y Apellidos en fila -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:weightSum="2"
+                android:layout_marginBottom="20dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginEnd="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Nombre"
+                        android:textColor="@color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/natasans"
+                        android:layout_marginBottom="6dp"/>
+
+                    <EditText
+                        android:id="@+id/editTextName"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:background="@drawable/rounded_background"
+                        android:backgroundTint="@color/white"
+                        android:hint="Nombre"
+                        android:padding="16dp"
+                        android:textSize="18sp"
+                        android:inputType="textPersonName"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Apellidos"
+                        android:textColor="@color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/natasans"
+                        android:layout_marginBottom="6dp"/>
+
+                    <EditText
+                        android:id="@+id/editTextLastName"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:background="@drawable/rounded_background"
+                        android:backgroundTint="@color/white"
+                        android:hint="Apellidos"
+                        android:padding="16dp"
+                        android:textSize="18sp"
+                        android:inputType="textPersonName"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Correo electrónico -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Correo electrónico"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/natasans"
+                android:layout_marginBottom="6dp"/>
+
+            <EditText
+                android:id="@+id/editTextEmail"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginBottom="20dp"
+                android:background="@drawable/rounded_background"
+                android:backgroundTint="@color/white"
+                android:hint="ejemplo@correo.com"
+                android:padding="16dp"
+                android:textSize="18sp"
+                android:inputType="textEmailAddress"
+                android:enabled="false"/>
+
+            <!-- Teléfono y Alias en fila -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:weightSum="2"
+                android:layout_marginBottom="20dp">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginEnd="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Teléfono"
+                        android:textColor="@color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/natasans"
+                        android:layout_marginBottom="6dp"/>
+
+                    <EditText
+                        android:id="@+id/editTextPhone"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:background="@drawable/rounded_background"
+                        android:backgroundTint="@color/white"
+                        android:hint="Opcional"
+                        android:padding="16dp"
+                        android:textSize="18sp"
+                        android:inputType="phone"/>
+                </LinearLayout>
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="10dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Alias"
+                        android:textColor="@color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/natasans"
+                        android:layout_marginBottom="6dp"/>
+
+                    <EditText
+                        android:id="@+id/editTextAlias"
+                        android:layout_width="match_parent"
+                        android:layout_height="56dp"
+                        android:background="@drawable/rounded_background"
+                        android:backgroundTint="@color/white"
+                        android:hint="Usuario"
+                        android:padding="16dp"
+                        android:textSize="18sp"
+                        android:inputType="text"/>
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- Dirección -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Dirección"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/natasans"
+                android:layout_marginBottom="6dp"/>
+
+            <EditText
+                android:id="@+id/editTextAddress"
+                android:layout_width="match_parent"
+                android:layout_height="56dp"
+                android:layout_marginBottom="20dp"
+                android:background="@drawable/rounded_background"
+                android:backgroundTint="@color/white"
+                android:hint="Opcional"
+                android:padding="16dp"
+                android:textSize="18sp"
+                android:inputType="textPostalAddress"/>
+
+            <!-- Sección de cambio de contraseña -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Cambiar Contraseña"
+                android:textColor="@color/black"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/natasans"
+                android:layout_marginBottom="16dp"
+                android:layout_marginTop="10dp"/>
+
+            <!-- Contraseña actual -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Contraseña actual"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/natasans"
+                android:layout_marginBottom="6dp"/>
+
+            <include
+                android:id="@+id/currentPasswordField"
+                layout="@layout/password_field"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Nueva contraseña -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Nueva contraseña"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/natasans"
+                android:layout_marginBottom="6dp"/>
+
+            <include
+                android:id="@+id/newPasswordField"
+                layout="@layout/password_field"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Confirmar contraseña -->
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Confirmar nueva contraseña"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/natasans"
+                android:layout_marginBottom="6dp"/>
+
+            <include
+                android:id="@+id/confirmPasswordField"
+                layout="@layout/password_field"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="28dp"/>
+
+            <!-- Botones -->
+            <Button
+                android:id="@+id/buttonSaveChanges"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Guardar Cambios"
+                android:textSize="18sp"
+                android:textColor="@color/white"
+                android:backgroundTint="@color/vibrant_orange"
+                android:fontFamily="@font/natasans"
+                android:textStyle="bold"
+                android:elevation="6dp"
+                android:padding="16dp"
+                android:layout_marginBottom="16dp"/>
+
+            <Button
+                android:id="@+id/buttonCancel"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Cancelar"
+                android:textSize="18sp"
+                android:textColor="@color/white"
+                android:backgroundTint="@color/bright_blue"
+                android:fontFamily="@font/natasans"
+                android:textStyle="bold"
+                android:elevation="6dp"
+                android:padding="16dp"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Botón de prueba temporal -->
+            <Button
+                android:id="@+id/buttonTestConnectivity"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="🧪 Probar Conectividad"
+                android:textSize="16sp"
+                android:textColor="@color/white"
+                android:backgroundTint="@color/vibrant_orange"
+                android:fontFamily="@font/natasans"
+                android:textStyle="bold"
+                android:elevation="4dp"
+                android:padding="12dp"/>
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

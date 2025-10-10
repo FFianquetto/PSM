@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Colores base -->
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+
+    <!-- Colores personalizados -->
+    <color name="vibrant_orange">#FEBA03</color>
+    <color name="bright_blue">#2196F3</color>
+    <color name="primary_blue">#6AB6CB</color>
+
+    <color name="light_gray">#F5F5F5</color>
+    <color name="medium_gray">#9E9E9E</color>
+    <color name="dark_gray">#424242</color>
+    
+    <!-- Colores de texto -->
+    <color name="primary_text">#212121</color>
+    <color name="secondary_text">#757575</color>
+
+</resources>
