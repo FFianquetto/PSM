@@ -1,16 +1,20 @@
 package com.example.ejemplo2.data.repository
 
 import android.content.Context
+import android.graphics.Bitmap
 import com.example.ejemplo2.data.database.AppDatabase
 import com.example.ejemplo2.data.entity.Recipe
+import com.example.ejemplo2.data.entity.RecipeImage
 import com.example.ejemplo2.utils.ValidationResult
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.withContext
+import java.io.ByteArrayOutputStream
 
 class RecipeRepository(context: Context) {
     
     private val recipeDao = AppDatabase.getDatabase(context).recipeDao()
+    private val recipeImageDao = AppDatabase.getDatabase(context).recipeImageDao()
     
     /**
      * Crear una nueva receta
@@ -160,5 +164,144 @@ class RecipeRepository(context: Context) {
         } catch (e: Exception) {
             ValidationResult(false, "Error al cambiar estado: ${e.message}")
         }
+    }
+    
+    /**
+     * Clase para retornar resultado con ID de receta
+     */
+    data class RecipeCreationResult(
+        val isValid: Boolean,
+        val message: String,
+        val recipeId: Long = 0
+    )
+    
+    /**
+     * Crear una receta con imágenes
+     */
+    suspend fun createRecipeWithImages(
+        title: String,
+        ingredients: String,
+        steps: String,
+        authorId: Long,
+        authorName: String,
+        tags: String? = null,
+        cookingTime: Int = 0,
+        servings: Int = 1,
+        isPublished: Boolean = false,
+        images: List<Pair<Bitmap, String>> // Lista de pares (Bitmap, descripción)
+    ): RecipeCreationResult = withContext(Dispatchers.IO) {
+        
+        // Validar campos obligatorios
+        if (title.isBlank()) {
+            return@withContext RecipeCreationResult(false, "El título es obligatorio")
+        }
+        
+        if (ingredients.isBlank()) {
+            return@withContext RecipeCreationResult(false, "Los ingredientes son obligatorios")
+        }
+        
+        if (steps.isBlank()) {
+            return@withContext RecipeCreationResult(false, "Los pasos son obligatorios")
+        }
+        
+        if (authorId <= 0) {
+            return@withContext RecipeCreationResult(false, "ID de autor inválido")
+        }
+        
+        if (authorName.isBlank()) {
+            return@withContext RecipeCreationResult(false, "Nombre de autor es obligatorio")
+        }
+        
+        try {
+            // Crear la receta
+            val recipe = Recipe(
+                title = title.trim(),
+                ingredients = ingredients.trim(),
+                steps = steps.trim(),
+                authorId = authorId,
+                authorName = authorName.trim(),
+                tags = tags?.trim(),
+                cookingTime = cookingTime,
+                servings = servings,
+                imagePath = null, // Ya no usamos imagePath
+                isPublished = isPublished
+            )
+            
+            val recipeId = recipeDao.insertRecipe(recipe)
+            
+            if (recipeId > 0) {
+                // Guardar las imágenes si hay alguna
+                if (images.isNotEmpty()) {
+                    val recipeImages = images.map { (bitmap, description) ->
+                        RecipeImage(
+                            recipeId = recipeId,
+                            imageData = bitmapToByteArray(bitmap),
+                            description = description.ifBlank { null }
+                        )
+                    }
+                    recipeImageDao.insertImages(recipeImages)
+                }
+                
+                RecipeCreationResult(
+                    true, 
+                    "Receta ${if (isPublished) "publicada" else "guardada como borrador"} exitosamente",
+                    recipeId
+                )
+            } else {
+                RecipeCreationResult(false, "Error al guardar la receta")
+            }
+        } catch (e: Exception) {
+            RecipeCreationResult(false, "Error al crear receta: ${e.message}")
+        }
+    }
+    
+    /**
+     * Guardar imágenes de una receta existente
+     */
+    suspend fun saveRecipeImages(
+        recipeId: Long,
+        images: List<Pair<Bitmap, String>>
+    ): ValidationResult = withContext(Dispatchers.IO) {
+        try {
+            val recipeImages = images.map { (bitmap, description) ->
+                RecipeImage(
+                    recipeId = recipeId,
+                    imageData = bitmapToByteArray(bitmap),
+                    description = description.ifBlank { null }
+                )
+            }
+            recipeImageDao.insertImages(recipeImages)
+            ValidationResult(true, "Imágenes guardadas exitosamente")
+        } catch (e: Exception) {
+            ValidationResult(false, "Error al guardar imágenes: ${e.message}")
+        }
+    }
+    
+    /**
+     * Obtener imágenes de una receta
+     */
+    fun getRecipeImages(recipeId: Long): Flow<List<RecipeImage>> {
+        return recipeImageDao.getImagesByRecipeId(recipeId)
+    }
+    
+    /**
+     * Eliminar una imagen
+     */
+    suspend fun deleteRecipeImage(imageId: Long): ValidationResult = withContext(Dispatchers.IO) {
+        try {
+            recipeImageDao.deleteImageById(imageId)
+            ValidationResult(true, "Imagen eliminada exitosamente")
+        } catch (e: Exception) {
+            ValidationResult(false, "Error al eliminar imagen: ${e.message}")
+        }
+    }
+    
+    /**
+     * Convertir Bitmap a ByteArray
+     */
+    private fun bitmapToByteArray(bitmap: Bitmap): ByteArray {
+        val stream = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 80, stream)
+        return stream.toByteArray()
     }
 }

@@ -54,17 +54,42 @@
             android:orientation="vertical"
             android:padding="20dp">
 
-            <!-- Imagen de la receta -->
-            <ImageView
-                android:id="@+id/recipeImage"
+            <!-- Carrusel de imágenes de la receta -->
+            <LinearLayout
                 android:layout_width="match_parent"
-                android:layout_height="200dp"
-                android:layout_marginBottom="20dp"
-                android:background="@drawable/rounded_background"
-                android:backgroundTint="@color/light_gray"
-                android:scaleType="centerCrop"
-                android:src="@drawable/ic_no_recipes"
-                android:contentDescription="Imagen de la receta" />
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="20dp">
+
+                <!-- Contenedor de imágenes con scroll horizontal -->
+                <HorizontalScrollView
+                    android:id="@+id/imagesScrollView"
+                    android:layout_width="match_parent"
+                    android:layout_height="200dp"
+                    android:background="@drawable/rounded_background"
+                    android:backgroundTint="@color/light_gray"
+                    android:scrollbars="none">
+
+                    <LinearLayout
+                        android:id="@+id/imagesContainer"
+                        android:layout_width="wrap_content"
+                        android:layout_height="match_parent"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical" />
+
+                </HorizontalScrollView>
+
+                <!-- Indicador de imágenes (puntos) -->
+                <LinearLayout
+                    android:id="@+id/imageIndicators"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone" />
+
+            </LinearLayout>
 
             <!-- Título de la receta -->
             <TextView

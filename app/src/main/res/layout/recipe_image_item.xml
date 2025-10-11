@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/rounded_background"
+    android:padding="12dp"
+    android:layout_marginBottom="12dp">
+
+    <!-- Contenedor de imagen con botón de eliminar -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="200dp"
+        android:layout_marginBottom="8dp">
+
+        <ImageView
+            android:id="@+id/recipeImageView"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:contentDescription="Imagen de receta"
+            android:background="#E0E0E0" />
+
+        <!-- Botón de eliminar en la esquina superior derecha -->
+        <ImageView
+            android:id="@+id/deleteImageButton"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_alignParentEnd="true"
+            android:layout_alignParentTop="true"
+            android:layout_margin="8dp"
+            android:src="@drawable/ic_close"
+            android:contentDescription="Eliminar imagen"
+            android:background="@android:color/white"
+            android:padding="6dp"
+            android:elevation="4dp"
+            app:tint="@color/primary_blue" />
+    </RelativeLayout>
+
+    <!-- Campo de descripción -->
+    <EditText
+        android:id="@+id/imageDescriptionInput"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Descripción de la imagen (opcional)"
+        android:textColor="@android:color/white"
+        android:textColorHint="#CCCCCC"
+        android:textSize="14sp"
+        android:fontFamily="@font/natasans"
+        android:padding="8dp"
+        android:background="@android:color/transparent"
+        android:maxLines="2" />
+
+</LinearLayout>
+
+

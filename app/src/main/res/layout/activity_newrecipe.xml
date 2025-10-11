@@ -150,28 +150,115 @@
                 android:gravity="top"
                 android:inputType="textMultiLine" />
 
-            <!-- Imagen -->
+            <!-- Tiempo de cocción y porciones -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="20dp"
+                android:weightSum="2">
+
+                <!-- Tiempo de cocción -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginEnd="8dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Tiempo de cocción"
+                        android:textColor="@android:color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/natasans"
+                        android:layout_marginBottom="6dp" />
+
+                    <EditText
+                        android:id="@+id/cookingTimeInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/rounded_background"
+                        android:hint="Minutos"
+                        android:padding="12dp"
+                        android:textSize="16sp"
+                        android:textColor="@android:color/white"
+                        android:textColorHint="@android:color/white"
+                        android:fontFamily="@font/natasans"
+                        android:inputType="number" />
+
+                </LinearLayout>
+
+                <!-- Porciones -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_marginStart="8dp">
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Porciones"
+                        android:textColor="@android:color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/natasans"
+                        android:layout_marginBottom="6dp" />
+
+                    <EditText
+                        android:id="@+id/servingsInput"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="@drawable/rounded_background"
+                        android:hint="Cantidad"
+                        android:padding="12dp"
+                        android:textSize="16sp"
+                        android:textColor="@android:color/white"
+                        android:textColorHint="@android:color/white"
+                        android:fontFamily="@font/natasans"
+                        android:inputType="number" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+            <!-- Imágenes -->
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Imagen"
+                android:text="Imágenes"
                 android:textColor="@android:color/black"
                 android:textSize="18sp"
                 android:textStyle="bold"
                 android:fontFamily="@font/natasans"
                 android:layout_marginBottom="6dp" />
 
+            <!-- Contenedor de imágenes agregadas -->
             <LinearLayout
+                android:id="@+id/imagesContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginBottom="12dp" />
+
+            <!-- Botón para agregar imagen -->
+            <LinearLayout
+                android:id="@+id/addImageButton"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
                 android:gravity="center"
                 android:background="@drawable/rounded_background"
                 android:padding="32dp"
-                android:layout_marginBottom="28dp">
+                android:layout_marginBottom="28dp"
+                android:clickable="true"
+                android:focusable="true">
 
                 <ImageView
-                    android:id="@+id/recipeImagePlaceholder"
                     android:layout_width="48dp"
                     android:layout_height="48dp"
                     android:src="@drawable/ic_add_photo"

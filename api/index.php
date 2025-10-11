@@ -4,12 +4,15 @@
  */
 
 require_once 'models/UserModel.php';
+require_once 'models/RecipeModel.php';
 
 class ApiController {
     private $userModel;
+    private $recipeModel;
     
     public function __construct() {
         $this->userModel = new UserModel();
+        $this->recipeModel = new RecipeModel();
     }
     
     /**
@@ -107,6 +110,14 @@ class ApiController {
                 $this->migrateUsers($data);
                 break;
                 
+            case '/api/migrate/recipes':
+                $this->migrateRecipes($data);
+                break;
+                
+            case '/api/migrate/recipe_images':
+                $this->migrateRecipeImages($data);
+                break;
+                
             case '/api/users':
                 $this->createUser($data);
                 break;
@@ -117,6 +128,10 @@ class ApiController {
                 
             case '/api/setup':
                 $this->setupDatabase();
+                break;
+                
+            case '/api/update_tables':
+                $this->updateTables();
                 break;
                 
             default:
@@ -137,6 +152,44 @@ class ApiController {
         
         $this->sendResponse([
             'message' => 'Migración completada',
+            'migrated' => $result['migrated'],
+            'total' => $result['total'],
+            'errors' => $result['errors']
+        ]);
+    }
+    
+    /**
+     * Migrar recetas desde SQLite
+     */
+    private function migrateRecipes($data) {
+        if (!isset($data['recipes']) || !is_array($data['recipes'])) {
+            $this->sendResponse(['error' => 'Datos de recetas requeridos'], 400);
+            return;
+        }
+        
+        $result = $this->recipeModel->migrateRecipes($data['recipes']);
+        
+        $this->sendResponse([
+            'message' => 'Migración de recetas completada',
+            'migrated' => $result['migrated'],
+            'total' => $result['total'],
+            'errors' => $result['errors']
+        ]);
+    }
+    
+    /**
+     * Migrar imágenes de recetas desde SQLite
+     */
+    private function migrateRecipeImages($data) {
+        if (!isset($data['images']) || !is_array($data['images'])) {
+            $this->sendResponse(['error' => 'Datos de imágenes requeridos'], 400);
+            return;
+        }
+        
+        $result = $this->recipeModel->migrateRecipeImages($data['images']);
+        
+        $this->sendResponse([
+            'message' => 'Migración de imágenes completada',
             'migrated' => $result['migrated'],
             'total' => $result['total'],
             'errors' => $result['errors']
@@ -356,7 +409,20 @@ class ApiController {
     private function setupDatabase() {
         try {
             $this->userModel->createTable();
-            $this->sendResponse(['message' => 'Base de datos configurada exitosamente']);
+            $this->recipeModel->createTables();
+            $this->sendResponse(['message' => 'Base de datos configurada exitosamente (usuarios y recetas)']);
+        } catch (Exception $e) {
+            $this->sendResponse(['error' => $e->getMessage()], 500);
+        }
+    }
+    
+    /**
+     * Actualizar tablas existentes
+     */
+    private function updateTables() {
+        try {
+            $this->recipeModel->createTables();
+            $this->sendResponse(['message' => 'Tablas actualizadas exitosamente']);
         } catch (Exception $e) {
             $this->sendResponse(['error' => $e->getMessage()], 500);
         }

@@ -6,21 +6,25 @@ import androidx.room.RoomDatabase
 import android.content.Context
 import com.example.ejemplo2.data.dao.UserDao
 import com.example.ejemplo2.data.dao.RecipeDao
+import com.example.ejemplo2.data.dao.RecipeImageDao
 import com.example.ejemplo2.data.entity.User
 import com.example.ejemplo2.data.entity.Recipe
+import com.example.ejemplo2.data.entity.RecipeImage
 
 @Database(
     entities = [
         User::class,
-        Recipe::class
+        Recipe::class,
+        RecipeImage::class
     ],
-    version = 2, // Incrementar versión por nueva entidad
+    version = 3, // Incrementar versión por nueva entidad RecipeImage
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
     
     abstract fun userDao(): UserDao
     abstract fun recipeDao(): RecipeDao
+    abstract fun recipeImageDao(): RecipeImageDao
     
     companion object {
         @Volatile

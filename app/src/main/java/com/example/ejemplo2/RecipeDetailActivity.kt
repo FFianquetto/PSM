@@ -5,11 +5,15 @@ import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.widget.HorizontalScrollView
 import android.widget.ImageView
+import android.widget.LinearLayout
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.ejemplo2.data.entity.Recipe
+import com.example.ejemplo2.data.entity.RecipeImage
 import com.example.ejemplo2.data.repository.RecipeRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -114,8 +118,8 @@ class RecipeDetailActivity : AppCompatActivity() {
         }
         findViewById<TextView>(R.id.recipeServings).text = servingsText
         
-        // Imagen (si existe)
-        loadRecipeImage(recipe.imagePath)
+        // Cargar imágenes de la receta
+        loadRecipeImages()
     }
     
     private fun formatIngredients(ingredients: String): String {
@@ -133,51 +137,143 @@ class RecipeDetailActivity : AppCompatActivity() {
         }
     }
     
-    private fun loadRecipeImage(imagePath: String?) {
-        val recipeImage = findViewById<ImageView>(R.id.recipeImage)
-        
-        if (imagePath.isNullOrBlank()) {
-            // Usar imagen por defecto
-            recipeImage.setImageResource(R.drawable.ic_no_recipes)
-            return
-        }
-        
+    private fun loadRecipeImages() {
         lifecycleScope.launch {
             try {
-                val bitmap = loadBitmapFromPath(imagePath)
-                if (bitmap != null) {
-                    recipeImage.setImageBitmap(bitmap)
-                } else {
-                    recipeImage.setImageResource(R.drawable.ic_no_recipes)
+                val imagesFlow = recipeRepository.getRecipeImages(recipeId)
+                imagesFlow.collect { images ->
+                    displayRecipeImages(images)
+                    return@collect // Salir después de la primera emisión
                 }
             } catch (e: Exception) {
-                Log.e("RecipeDetailActivity", "Error cargando imagen: ${e.message}", e)
-                recipeImage.setImageResource(R.drawable.ic_no_recipes)
+                Log.e("RecipeDetailActivity", "Error cargando imágenes: ${e.message}", e)
+                // Mostrar imagen por defecto si hay error
+                val imagesContainer = findViewById<LinearLayout>(R.id.imagesContainer)
+                imagesContainer.removeAllViews()
+                val defaultImageView = ImageView(this@RecipeDetailActivity)
+                defaultImageView.layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.MATCH_PARENT
+                )
+                defaultImageView.scaleType = ImageView.ScaleType.CENTER_CROP
+                defaultImageView.setImageResource(R.drawable.ic_no_recipes)
+                imagesContainer.addView(defaultImageView)
             }
         }
     }
     
-    private suspend fun loadBitmapFromPath(path: String): Bitmap? = withContext(Dispatchers.IO) {
-        return@withContext try {
-            if (path.startsWith("/")) {
-                val file = File(path)
-                Log.d("RecipeDetailActivity", "Cargando imagen local: ${file.absolutePath}")
+    private fun displayRecipeImages(images: List<RecipeImage>) {
+        val imagesContainer = findViewById<LinearLayout>(R.id.imagesContainer)
+        val imageIndicators = findViewById<LinearLayout>(R.id.imageIndicators)
+        
+        // Limpiar contenedores
+        imagesContainer.removeAllViews()
+        imageIndicators.removeAllViews()
+        
+        if (images.isEmpty()) {
+            // No hay imágenes, mostrar imagen por defecto
+            val defaultImageView = ImageView(this@RecipeDetailActivity)
+            defaultImageView.layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.MATCH_PARENT,
+                LinearLayout.LayoutParams.MATCH_PARENT
+            )
+            defaultImageView.scaleType = ImageView.ScaleType.CENTER_CROP
+            defaultImageView.setImageResource(R.drawable.ic_no_recipes)
+            imagesContainer.addView(defaultImageView)
+            imageIndicators.visibility = View.GONE
+            return
+        }
+        
+        // Mostrar todas las imágenes en el carrusel
+        lifecycleScope.launch {
+            for ((index, image) in images.withIndex()) {
+                val bitmap = byteArrayToBitmap(image.imageData)
                 
-                if (file.exists()) {
-                    val inputStream = FileInputStream(file)
-                    val bitmap = BitmapFactory.decodeStream(inputStream)
-                    inputStream.close()
-                    bitmap
+                if (bitmap != null) {
+                    val imageView = ImageView(this@RecipeDetailActivity)
+                    val layoutParams = LinearLayout.LayoutParams(
+                        resources.displayMetrics.widthPixels, // Ancho de pantalla
+                        LinearLayout.LayoutParams.MATCH_PARENT
+                    )
+                    imageView.layoutParams = layoutParams
+                    imageView.scaleType = ImageView.ScaleType.CENTER_CROP
+                    imageView.setImageBitmap(bitmap)
+                    
+                    // Agregar margen entre imágenes (excepto la última)
+                    if (index < images.size - 1) {
+                        layoutParams.setMargins(0, 0, 8, 0)
+                    }
+                    
+                    imagesContainer.addView(imageView)
+                    Log.d("RecipeDetailActivity", "Imagen ${index + 1} cargada exitosamente")
                 } else {
-                    Log.w("RecipeDetailActivity", "Archivo de imagen no existe: ${file.absolutePath}")
-                    null
+                    Log.w("RecipeDetailActivity", "Error convirtiendo ByteArray a Bitmap para imagen ${index + 1}")
                 }
-            } else {
-                Log.w("RecipeDetailActivity", "Ruta de imagen no válida: $path")
-                null
             }
+            
+            // Crear indicadores de página si hay más de una imagen
+            if (images.size > 1) {
+                createImageIndicators(images.size)
+                imageIndicators.visibility = View.VISIBLE
+                setupScrollListener(images.size)
+            } else {
+                imageIndicators.visibility = View.GONE
+            }
+        }
+    }
+    
+    private fun createImageIndicators(totalImages: Int) {
+        val imageIndicators = findViewById<LinearLayout>(R.id.imageIndicators)
+        
+        for (i in 0 until totalImages) {
+            val indicator = View(this@RecipeDetailActivity)
+            val size = resources.getDimensionPixelSize(android.R.dimen.app_icon_size) / 4 // 12dp
+            val layoutParams = LinearLayout.LayoutParams(size, size)
+            
+            // Margen entre indicadores
+            if (i > 0) {
+                layoutParams.setMargins(8, 0, 0, 0)
+            }
+            
+            indicator.layoutParams = layoutParams
+            indicator.background = ContextCompat.getDrawable(this, R.drawable.indicator_dot_inactive)
+            imageIndicators.addView(indicator)
+        }
+        
+        // Marcar el primer indicador como activo
+        if (totalImages > 0) {
+            val firstIndicator = imageIndicators.getChildAt(0) as View
+            firstIndicator.background = ContextCompat.getDrawable(this, R.drawable.indicator_dot_active)
+        }
+    }
+    
+    private fun setupScrollListener(totalImages: Int) {
+        val scrollView = findViewById<HorizontalScrollView>(R.id.imagesScrollView)
+        val imageIndicators = findViewById<LinearLayout>(R.id.imageIndicators)
+        val screenWidth = resources.displayMetrics.widthPixels
+        
+        scrollView.setOnScrollChangeListener { _, scrollX, _, _, _ ->
+            // Calcular qué imagen está visible
+            val currentImageIndex = (scrollX / screenWidth.toFloat()).toInt()
+            val clampedIndex = currentImageIndex.coerceIn(0, totalImages - 1)
+            
+            // Actualizar indicadores
+            for (i in 0 until totalImages) {
+                val indicator = imageIndicators.getChildAt(i) as View
+                if (i == clampedIndex) {
+                    indicator.background = ContextCompat.getDrawable(this, R.drawable.indicator_dot_active)
+                } else {
+                    indicator.background = ContextCompat.getDrawable(this, R.drawable.indicator_dot_inactive)
+                }
+            }
+        }
+    }
+    
+    private suspend fun byteArrayToBitmap(byteArray: ByteArray): Bitmap? = withContext(Dispatchers.IO) {
+        return@withContext try {
+            BitmapFactory.decodeByteArray(byteArray, 0, byteArray.size)
         } catch (e: Exception) {
-            Log.e("RecipeDetailActivity", "Error en loadBitmapFromPath: ${e.message}", e)
+            Log.e("RecipeDetailActivity", "Error convirtiendo ByteArray a Bitmap: ${e.message}", e)
             null
         }
     }

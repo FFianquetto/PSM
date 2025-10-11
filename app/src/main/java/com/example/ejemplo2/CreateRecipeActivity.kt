@@ -13,9 +13,11 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Toast
+import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import com.example.ejemplo2.data.repository.RecipeRepository
+import com.example.ejemplo2.data.api.ApiService
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
@@ -31,16 +33,24 @@ class CreateRecipeActivity : AppCompatActivity() {
     }
     
     private lateinit var recipeRepository: RecipeRepository
+    private lateinit var apiService: ApiService
     private var currentUserId: Long = -1
     private var currentUserName: String = ""
-    private var selectedImagePath: String? = null
+    
+    // Lista para almacenar las imágenes seleccionadas
+    private data class RecipeImageData(
+        val bitmap: Bitmap,
+        var description: String = ""
+    )
+    private val selectedImages = mutableListOf<RecipeImageData>()
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_newrecipe)
 
-        // Inicializar repositorio
+        // Inicializar repositorio y servicio API
         recipeRepository = RecipeRepository(this)
+        apiService = ApiService(this)
         
         // Obtener datos del usuario desde el intent
         currentUserId = intent.getLongExtra("user_id", -1)
@@ -60,7 +70,8 @@ class CreateRecipeActivity : AppCompatActivity() {
         val ingredientsContainer = findViewById<LinearLayout>(R.id.ingredientsContainer)
         val draftButton = findViewById<Button>(R.id.draftButton)
         val publishButton = findViewById<Button>(R.id.publishButton)
-        val recipeImagePlaceholder = findViewById<ImageView>(R.id.recipeImagePlaceholder)
+        val imagesContainer = findViewById<LinearLayout>(R.id.imagesContainer)
+        val addImageButton = findViewById<LinearLayout>(R.id.addImageButton)
 
         // Navegación inferior
         val homeButton = findViewById<View>(R.id.homeButton)
@@ -78,7 +89,7 @@ class CreateRecipeActivity : AppCompatActivity() {
         }
         
         // Botón para agregar foto
-        recipeImagePlaceholder.setOnClickListener {
+        addImageButton.setOnClickListener {
             showImageSelectionDialog()
         }
 
@@ -134,10 +145,14 @@ class CreateRecipeActivity : AppCompatActivity() {
     private fun saveRecipe(isPublished: Boolean) {
         val recipeTitle = findViewById<EditText>(R.id.recipeTitle)
         val recipeSteps = findViewById<EditText>(R.id.recipeSteps)
+        val cookingTimeInput = findViewById<EditText>(R.id.cookingTimeInput)
+        val servingsInput = findViewById<EditText>(R.id.servingsInput)
         val ingredientsContainer = findViewById<LinearLayout>(R.id.ingredientsContainer)
         
         val title = recipeTitle.text.toString().trim()
         val steps = recipeSteps.text.toString().trim()
+        val cookingTime = cookingTimeInput.text.toString().trim().toIntOrNull() ?: 0
+        val servings = servingsInput.text.toString().trim().toIntOrNull() ?: 1
         
         // Validar campos obligatorios
         if (title.isBlank()) {
@@ -184,19 +199,64 @@ class CreateRecipeActivity : AppCompatActivity() {
             try {
                 val ingredientsText = ingredients.joinToString(", ")
                 
-                val result = recipeRepository.createRecipe(
+                // Convertir las imágenes a lista de Pair<Bitmap, String>
+                val imagesList = selectedImages.map { imageData ->
+                    Pair(imageData.bitmap, imageData.description)
+                }
+                
+                val result = recipeRepository.createRecipeWithImages(
                     title = title,
                     ingredients = ingredientsText,
                     steps = steps,
                     authorId = currentUserId,
                     authorName = currentUserName,
-                    imagePath = selectedImagePath,
-                    isPublished = isPublished
+                    cookingTime = cookingTime,
+                    servings = servings,
+                    isPublished = isPublished,
+                    images = imagesList
                 )
                 
                 if (result.isValid) {
                     Toast.makeText(this@CreateRecipeActivity, result.message, Toast.LENGTH_LONG).show()
-                    finish() // Regresar a la pantalla anterior
+                    
+                    // Sincronización en background (no bloquea la UI)
+                    if (selectedImages.isNotEmpty()) {
+                        Toast.makeText(this@CreateRecipeActivity, "Sincronizando en segundo plano...", Toast.LENGTH_SHORT).show()
+                        
+                        // Ejecutar sincronización en un scope separado
+                        lifecycleScope.launch(Dispatchers.IO) {
+                            try {
+                                val createdRecipe = recipeRepository.getRecipeById(result.recipeId)
+                                if (createdRecipe != null) {
+                                    Log.d("CreateRecipe", "Iniciando sincronización en background")
+                                    
+                                    // Sincronizar receta
+                                    val recipeResult = apiService.syncRecipeToMySQL(createdRecipe)
+                                    Log.d("CreateRecipe", "Receta sync: ${recipeResult.isSuccess}")
+                                    
+                                    // Sincronizar imágenes
+                                    val imagesResult = apiService.syncRecipeImagesToMySQL(result.recipeId)
+                                    Log.d("CreateRecipe", "Imágenes sync: ${imagesResult.isSuccess}")
+                                    
+                                    // Mostrar resultado en UI thread
+                                    withContext(Dispatchers.Main) {
+                                        if (recipeResult.isSuccess && imagesResult.isSuccess) {
+                                            Toast.makeText(this@CreateRecipeActivity, "Sincronización completada", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(this@CreateRecipeActivity, "Sincronización con errores", Toast.LENGTH_SHORT).show()
+                                        }
+                                    }
+                                }
+                            } catch (e: Exception) {
+                                Log.e("CreateRecipe", "Error en sincronización background", e)
+                                withContext(Dispatchers.Main) {
+                                    Toast.makeText(this@CreateRecipeActivity, "Error sincronizando: ${e.message}", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
+                    }
+                    
+                    finish() // Regresar inmediatamente
                 } else {
                     Toast.makeText(this@CreateRecipeActivity, result.message, Toast.LENGTH_LONG).show()
                 }
@@ -262,10 +322,8 @@ class CreateRecipeActivity : AppCompatActivity() {
                 inputStream?.close()
                 
                 bitmap?.let {
-                    val savedPath = saveImageToInternalStorage(it, "recipe_${System.currentTimeMillis()}.jpg")
-                    selectedImagePath = savedPath
-                    updateImagePreview(bitmap)
-                    Toast.makeText(this@CreateRecipeActivity, "Imagen seleccionada", Toast.LENGTH_SHORT).show()
+                    addImageToContainer(it)
+                    Toast.makeText(this@CreateRecipeActivity, "Imagen agregada", Toast.LENGTH_SHORT).show()
                 }
             } catch (e: Exception) {
                 Toast.makeText(this@CreateRecipeActivity, "Error al cargar imagen: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -276,9 +334,7 @@ class CreateRecipeActivity : AppCompatActivity() {
     private fun handleCameraImage(bitmap: Bitmap) {
         lifecycleScope.launch {
             try {
-                val savedPath = saveImageToInternalStorage(bitmap, "recipe_camera_${System.currentTimeMillis()}.jpg")
-                selectedImagePath = savedPath
-                updateImagePreview(bitmap)
+                addImageToContainer(bitmap)
                 Toast.makeText(this@CreateRecipeActivity, "Imagen capturada", Toast.LENGTH_SHORT).show()
             } catch (e: Exception) {
                 Toast.makeText(this@CreateRecipeActivity, "Error al guardar imagen: ${e.message}", Toast.LENGTH_SHORT).show()
@@ -286,29 +342,43 @@ class CreateRecipeActivity : AppCompatActivity() {
         }
     }
     
-    private suspend fun saveImageToInternalStorage(bitmap: Bitmap, filename: String): String {
-        return withContext(kotlinx.coroutines.Dispatchers.IO) {
-            val file = File(getExternalFilesDir(null), "recipe_images")
-            if (!file.exists()) {
-                file.mkdirs()
+    private fun addImageToContainer(bitmap: Bitmap) {
+        val imagesContainer = findViewById<LinearLayout>(R.id.imagesContainer)
+        
+        // Inflar el layout del item de imagen
+        val imageItemView = layoutInflater.inflate(R.layout.recipe_image_item, imagesContainer, false)
+        
+        // Configurar la vista de imagen
+        val imageView = imageItemView.findViewById<ImageView>(R.id.recipeImageView)
+        imageView.setImageBitmap(bitmap)
+        
+        // Obtener el EditText de descripción
+        val descriptionInput = imageItemView.findViewById<EditText>(R.id.imageDescriptionInput)
+        
+        // Crear objeto de datos de imagen
+        val imageData = RecipeImageData(bitmap, "")
+        selectedImages.add(imageData)
+        
+        // Listener para actualizar la descripción cuando el usuario escriba
+        descriptionInput.addTextChangedListener(object : android.text.TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: android.text.Editable?) {
+                imageData.description = s.toString()
             }
-            
-            val imageFile = File(file, filename)
-            val outputStream = FileOutputStream(imageFile)
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, outputStream)
-            outputStream.flush()
-            outputStream.close()
-            
-            imageFile.absolutePath
+        })
+        
+        // Configurar botón de eliminar
+        val deleteButton = imageItemView.findViewById<ImageView>(R.id.deleteImageButton)
+        deleteButton.setOnClickListener {
+            // Eliminar de la lista usando referencia al objeto
+            selectedImages.remove(imageData)
+            // Eliminar de la vista
+            imagesContainer.removeView(imageItemView)
+            Toast.makeText(this, "Imagen eliminada", Toast.LENGTH_SHORT).show()
         }
-    }
-    
-    private fun updateImagePreview(bitmap: Bitmap) {
-        val recipeImagePlaceholder = findViewById<ImageView>(R.id.recipeImagePlaceholder)
-        recipeImagePlaceholder.setImageBitmap(bitmap)
-        recipeImagePlaceholder.scaleType = ImageView.ScaleType.CENTER_CROP
-        recipeImagePlaceholder.layoutParams.width = 200
-        recipeImagePlaceholder.layoutParams.height = 200
-        recipeImagePlaceholder.requestLayout()
+        
+        // Agregar la vista al contenedor
+        imagesContainer.addView(imageItemView)
     }
 }

@@ -1,9 +1,8 @@
 <?php
 /**
- * Endpoint de setup de base de datos para la API
+ * Endpoint de migración de recetas para la API
  */
 
-require_once 'models/UserModel.php';
 require_once 'models/RecipeModel.php';
 
 // Configurar headers CORS
@@ -19,23 +18,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 try {
-    // Crear el modelo de usuario
-    $userModel = new UserModel();
+    // Obtener los datos del request
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
     
-    // Crear la tabla de usuarios
-    $userModel->createTable();
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        throw new Exception('JSON inválido');
+    }
+    
+    if (!isset($data['recipes']) || !is_array($data['recipes'])) {
+        throw new Exception('Datos de recetas requeridos');
+    }
     
     // Crear el modelo de recetas
     $recipeModel = new RecipeModel();
     
-    // Crear las tablas de recetas
-    $recipeModel->createTables();
+    // Migrar las recetas
+    $result = $recipeModel->migrateRecipes($data['recipes']);
     
     $response = [
         'data' => [
-            'message' => 'Base de datos configurada exitosamente (usuarios y recetas)'
+            'message' => 'Migración de recetas completada',
+            'migrated' => $result['migrated'],
+            'total' => $result['total'],
+            'errors' => $result['errors']
         ],
-        'message' => 'Setup completado',
+        'message' => 'Migración exitosa',
         'error' => null
     ];
     
@@ -53,3 +61,4 @@ try {
     echo json_encode($response, JSON_UNESCAPED_UNICODE);
 }
 ?>
+

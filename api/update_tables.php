@@ -1,9 +1,8 @@
 <?php
 /**
- * Endpoint de setup de base de datos para la API
+ * Script para actualizar las tablas existentes
  */
 
-require_once 'models/UserModel.php';
 require_once 'models/RecipeModel.php';
 
 // Configurar headers CORS
@@ -19,23 +18,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 try {
-    // Crear el modelo de usuario
-    $userModel = new UserModel();
-    
-    // Crear la tabla de usuarios
-    $userModel->createTable();
-    
-    // Crear el modelo de recetas
     $recipeModel = new RecipeModel();
     
-    // Crear las tablas de recetas
+    // Primero intentar crear las tablas (esto actualizará la estructura si es necesario)
     $recipeModel->createTables();
     
     $response = [
         'data' => [
-            'message' => 'Base de datos configurada exitosamente (usuarios y recetas)'
+            'message' => 'Tablas actualizadas exitosamente'
         ],
-        'message' => 'Setup completado',
+        'message' => 'Actualización completada',
         'error' => null
     ];
     

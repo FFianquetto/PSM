@@ -1,9 +1,8 @@
 <?php
 /**
- * Endpoint de setup de base de datos para la API
+ * Endpoint de migración de imágenes de recetas para la API
  */
 
-require_once 'models/UserModel.php';
 require_once 'models/RecipeModel.php';
 
 // Configurar headers CORS
@@ -19,23 +18,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 try {
-    // Crear el modelo de usuario
-    $userModel = new UserModel();
+    // Obtener los datos del request
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
     
-    // Crear la tabla de usuarios
-    $userModel->createTable();
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        throw new Exception('JSON inválido');
+    }
+    
+    if (!isset($data['images']) || !is_array($data['images'])) {
+        throw new Exception('Datos de imágenes requeridos');
+    }
     
     // Crear el modelo de recetas
     $recipeModel = new RecipeModel();
     
-    // Crear las tablas de recetas
-    $recipeModel->createTables();
+    // Migrar las imágenes
+    $result = $recipeModel->migrateRecipeImages($data['images']);
     
     $response = [
         'data' => [
-            'message' => 'Base de datos configurada exitosamente (usuarios y recetas)'
+            'message' => 'Migración de imágenes completada',
+            'migrated' => $result['migrated'],
+            'total' => $result['total'],
+            'errors' => $result['errors']
         ],
-        'message' => 'Setup completado',
+        'message' => 'Migración exitosa',
         'error' => null
     ];
     
@@ -53,3 +61,5 @@ try {
     echo json_encode($response, JSON_UNESCAPED_UNICODE);
 }
 ?>
+
+
