@@ -9,7 +9,7 @@ data class MySQLUser(
     @SerializedName("name")
     val name: String,
     
-    @SerializedName("last_name")
+    @SerializedName("lastName")
     val lastName: String,
     
     @SerializedName("email")
@@ -27,12 +27,12 @@ data class MySQLUser(
     @SerializedName("alias")
     val alias: String,
     
-    @SerializedName("avatar_path")
+    @SerializedName("avatarPath")
     val avatarPath: String? = null,
     
-    @SerializedName("created_at")
+    @SerializedName("createdAt")
     val createdAt: Long = System.currentTimeMillis(),
     
-    @SerializedName("updated_at")
+    @SerializedName("updatedAt")
     val updatedAt: Long = System.currentTimeMillis()
 )

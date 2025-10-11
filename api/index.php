@@ -173,13 +173,13 @@ class ApiController {
         
         $userData = [
             'name' => $data['name'],
-            'last_name' => $data['last_name'],
+            'last_name' => $data['lastName'],
             'email' => $data['email'],
             'password' => $data['password'],
             'phone' => $data['phone'] ?? null,
             'address' => $data['address'] ?? null,
             'alias' => $data['alias'],
-            'avatar_path' => $data['avatar_path'] ?? null,
+            'avatar_path' => $data['avatarPath'] ?? null,
             'updated_at' => time() * 1000 // Convertir a milisegundos
         ];
         
