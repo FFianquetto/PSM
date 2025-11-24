@@ -3,6 +3,9 @@
  * Configuración de la base de datos MySQL
  */
 
+// Configurar zona horaria de México (UTC-6)
+date_default_timezone_set('America/Mexico_City');
+
 require_once 'env.php';
 
 class DatabaseConfig {
@@ -27,6 +30,10 @@ class DatabaseConfig {
             $pdo = new PDO($dsn, $this->username, $this->password);
             $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
             $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+            
+            // Configurar zona horaria en MySQL para que coincida con PHP
+            $pdo->exec("SET time_zone = '-06:00'");
+            
             return $pdo;
         } catch(PDOException $e) {
             throw new Exception("Error de conexión: " . $e->getMessage());

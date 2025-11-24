@@ -12,6 +12,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.ProgressBar
 import android.widget.Toast
 import android.util.Log
 import androidx.appcompat.app.AppCompatActivity
@@ -34,8 +35,10 @@ class CreateRecipeActivity : AppCompatActivity() {
     
     private lateinit var recipeRepository: RecipeRepository
     private lateinit var apiService: ApiService
-    private var currentUserId: Long = -1
+    private var currentUserId: Long = -1 // ID de SQLite
+    private var currentUserMySQLId: Long = -1 // ID de MySQL
     private var currentUserName: String = ""
+    private var currentUserEmail: String = ""
     
     // Lista para almacenar las imágenes seleccionadas
     private data class RecipeImageData(
@@ -52,18 +55,41 @@ class CreateRecipeActivity : AppCompatActivity() {
         recipeRepository = RecipeRepository(this)
         apiService = ApiService(this)
         
-        // Obtener datos del usuario desde el intent
-        currentUserId = intent.getLongExtra("user_id", -1)
-        currentUserName = intent.getStringExtra("user_name") ?: "Usuario"
+        // Restaurar datos del usuario desde savedInstanceState si existe
+        if (savedInstanceState != null) {
+            currentUserId = savedInstanceState.getLong("saved_user_id", -1)
+            currentUserName = savedInstanceState.getString("saved_user_name") ?: ""
+            currentUserEmail = savedInstanceState.getString("saved_user_email") ?: ""
+            Log.d("CreateRecipeActivity", "Datos restaurados desde savedInstanceState - Email: '$currentUserEmail'")
+        }
         
-        // Verificar si el usuario está logueado
-        if (currentUserId == -1L) {
+        // Obtener datos del usuario desde el intent (prioridad sobre savedInstanceState)
+        val userIdFromIntent = intent.getLongExtra("user_id", -1)
+        val userNameFromIntent = intent.getStringExtra("user_name") ?: ""
+        val userEmailFromIntent = intent.getStringExtra("user_email") ?: ""
+        
+        // Actualizar con datos del intent si están disponibles
+        if (userIdFromIntent != -1L) {
+            currentUserId = userIdFromIntent
+        }
+        if (userNameFromIntent.isNotEmpty()) {
+            currentUserName = userNameFromIntent
+        }
+        if (userEmailFromIntent.isNotEmpty()) {
+            currentUserEmail = userEmailFromIntent
+        }
+        
+        Log.d("CreateRecipeActivity", "Email recibido del intent: '$userEmailFromIntent', Email final: '$currentUserEmail'")
+
+        // Validar que tenemos los datos mínimos necesarios
+        if (currentUserId == -1L || currentUserEmail.isBlank()) {
+            Log.e("CreateRecipeActivity", "Error: Usuario no logueado o email no disponible - UserId: $currentUserId, Email: '$currentUserEmail'")
             Toast.makeText(this, "Debes iniciar sesión para crear recetas", Toast.LENGTH_LONG).show()
             finish()
             return
         }
 
-        // Referencias a los elementos del layout
+
         val backButton = findViewById<View>(R.id.backButton)
         val recipeTitle = findViewById<EditText>(R.id.recipeTitle)
         val addIngredientButton = findViewById<Button>(R.id.addIngredientButton)
@@ -105,7 +131,19 @@ class CreateRecipeActivity : AppCompatActivity() {
 
         // Navegación inferior
         homeButton.setOnClickListener {
+            // SIEMPRE pasar el email al dashboard
+            val emailToPass = currentUserEmail.ifEmpty {
+                // Intentar obtener del intent original si está vacío
+                this.intent.getStringExtra("user_email") ?: ""
+            }
+            
+            Log.d("CreateRecipeActivity", "Navegando a MainActivity (Dashboard) con email: '$emailToPass'")
             val intent = Intent(this, MainActivity::class.java)
+            intent.putExtra("user_id", currentUserId)
+            if (currentUserName.isNotEmpty()) {
+                intent.putExtra("user_name", currentUserName)
+            }
+            intent.putExtra("user_email", emailToPass) // SIEMPRE pasar el email
             intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
             startActivity(intent)
             finish()
@@ -116,7 +154,19 @@ class CreateRecipeActivity : AppCompatActivity() {
         }
 
         profileButton.setOnClickListener {
+            // SIEMPRE pasar el email al perfil
+            val emailToPass = currentUserEmail.ifEmpty {
+                // Intentar obtener del intent original si está vacío
+                this.intent.getStringExtra("user_email") ?: ""
+            }
+            
+            Log.d("CreateRecipeActivity", "Navegando a ProfileActivity con email: '$emailToPass'")
             val intent = Intent(this, ProfileActivity::class.java)
+            intent.putExtra("user_id", currentUserId)
+            intent.putExtra("user_email", emailToPass) // SIEMPRE pasar el email
+            if (currentUserName.isNotEmpty()) {
+                intent.putExtra("user_name", currentUserName)
+            }
             startActivity(intent)
         }
     }
@@ -144,12 +194,14 @@ class CreateRecipeActivity : AppCompatActivity() {
     
     private fun saveRecipe(isPublished: Boolean) {
         val recipeTitle = findViewById<EditText>(R.id.recipeTitle)
+        val recipeDescription = findViewById<EditText>(R.id.recipeDescription)
         val recipeSteps = findViewById<EditText>(R.id.recipeSteps)
         val cookingTimeInput = findViewById<EditText>(R.id.cookingTimeInput)
         val servingsInput = findViewById<EditText>(R.id.servingsInput)
         val ingredientsContainer = findViewById<LinearLayout>(R.id.ingredientsContainer)
         
         val title = recipeTitle.text.toString().trim()
+        val description = recipeDescription.text.toString().trim()
         val steps = recipeSteps.text.toString().trim()
         val cookingTime = cookingTimeInput.text.toString().trim().toIntOrNull() ?: 0
         val servings = servingsInput.text.toString().trim().toIntOrNull() ?: 1
@@ -157,6 +209,11 @@ class CreateRecipeActivity : AppCompatActivity() {
         // Validar campos obligatorios
         if (title.isBlank()) {
             Toast.makeText(this, "El título es obligatorio", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        if (description.isBlank()) {
+            Toast.makeText(this, "La descripción es obligatoria", Toast.LENGTH_SHORT).show()
             return
         }
         
@@ -185,8 +242,13 @@ class CreateRecipeActivity : AppCompatActivity() {
         // Deshabilitar botones mientras se guarda
         val draftButton = findViewById<Button>(R.id.draftButton)
         val publishButton = findViewById<Button>(R.id.publishButton)
+        val progressBar = findViewById<ProgressBar>(R.id.saveProgressBar)
+        
         draftButton.isEnabled = false
         publishButton.isEnabled = false
+        
+        // Mostrar indicador de carga
+        progressBar.visibility = android.view.View.VISIBLE
         
         val buttonText = if (isPublished) "Publicando..." else "Guardando..."
         if (isPublished) {
@@ -204,11 +266,41 @@ class CreateRecipeActivity : AppCompatActivity() {
                     Pair(imageData.bitmap, imageData.description)
                 }
                 
-                val result = recipeRepository.createRecipeWithImages(
+                // Obtener el ID de MySQL del usuario antes de crear la receta
+                if (currentUserEmail.isBlank()) {
+                    Toast.makeText(this@CreateRecipeActivity, "Error: Email del usuario no disponible", Toast.LENGTH_LONG).show()
+                    Log.e("CreateRecipeActivity", "Email vacío o no disponible")
+                    return@launch
+                }
+                
+                Log.d("CreateRecipeActivity", "Obteniendo ID de MySQL para email: $currentUserEmail")
+                val userResult = apiService.getUserByEmail(currentUserEmail)
+                
+                if (userResult.isFailure) {
+                    val error = userResult.exceptionOrNull()
+                    Log.e("CreateRecipeActivity", "Error obteniendo usuario: ${error?.message}")
+                    Toast.makeText(this@CreateRecipeActivity, "Error obteniendo datos del usuario: ${error?.message}", Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+                
+                val user = userResult.getOrNull()
+                if (user == null) {
+                    Log.e("CreateRecipeActivity", "Usuario no encontrado para email: $currentUserEmail")
+                    Toast.makeText(this@CreateRecipeActivity, "Usuario no encontrado en el sistema", Toast.LENGTH_LONG).show()
+                    return@launch
+                }
+                
+                currentUserMySQLId = user.id
+                Log.d("CreateRecipeActivity", "ID MySQL obtenido exitosamente: $currentUserMySQLId para email: $currentUserEmail")
+                
+                // PRIMERO: Siempre guardar en SQLite local
+                Log.d("CreateRecipeActivity", "Guardando receta en SQLite local...")
+                val localResult = recipeRepository.createRecipeWithImages(
                     title = title,
+                    description = description,
                     ingredients = ingredientsText,
                     steps = steps,
-                    authorId = currentUserId,
+                    authorId = currentUserId, // Usar ID de SQLite para referencia local
                     authorName = currentUserName,
                     cookingTime = cookingTime,
                     servings = servings,
@@ -216,58 +308,114 @@ class CreateRecipeActivity : AppCompatActivity() {
                     images = imagesList
                 )
                 
-                if (result.isValid) {
-                    Toast.makeText(this@CreateRecipeActivity, result.message, Toast.LENGTH_LONG).show()
+                if (!localResult.isValid) {
+                    withContext(Dispatchers.Main) {
+                        progressBar.visibility = View.GONE
+                        draftButton.isEnabled = true
+                        publishButton.isEnabled = true
+                        draftButton.text = "Borrador"
+                        publishButton.text = "Publicar"
+                    }
+                    Toast.makeText(this@CreateRecipeActivity, "Error guardando localmente: ${localResult.message}", Toast.LENGTH_LONG).show()
+                    Log.e("CreateRecipeActivity", "Error guardando en SQLite: ${localResult.message}")
+                    return@launch
+                }
+                
+                Log.d("CreateRecipeActivity", "✓ Receta guardada en SQLite local: ${localResult.recipeId}")
+                
+                // SEGUNDO: Solo si está publicada, subir a MySQL
+                if (isPublished) {
+                    Log.d("CreateRecipeActivity", "Receta marcada como publicada - subiendo a MySQL...")
                     
-                    // Sincronización en background (no bloquea la UI)
-                    if (selectedImages.isNotEmpty()) {
-                        Toast.makeText(this@CreateRecipeActivity, "Sincronizando en segundo plano...", Toast.LENGTH_SHORT).show()
+                    val mysqlResult = apiService.createRecipeWithImages(
+                        title = title,
+                        description = description,
+                        ingredients = ingredientsText,
+                        steps = steps,
+                        authorId = currentUserMySQLId,
+                        authorName = currentUserName,
+                        tags = null, // Por ahora sin tags
+                        cookingTime = cookingTime,
+                        servings = servings,
+                        isPublished = true, // Siempre true cuando se publica
+                        images = imagesList
+                    )
+                    
+                    if (mysqlResult.isSuccess) {
+                        val mysqlRecipeId = mysqlResult.getOrNull()
+                        Log.d("CreateRecipeActivity", "✓ Receta publicada en MySQL con ID: $mysqlRecipeId")
                         
-                        // Ejecutar sincronización en un scope separado
-                        lifecycleScope.launch(Dispatchers.IO) {
-                            try {
-                                val createdRecipe = recipeRepository.getRecipeById(result.recipeId)
-                                if (createdRecipe != null) {
-                                    Log.d("CreateRecipe", "Iniciando sincronización en background")
-                                    
-                                    // Sincronizar receta
-                                    val recipeResult = apiService.syncRecipeToMySQL(createdRecipe)
-                                    Log.d("CreateRecipe", "Receta sync: ${recipeResult.isSuccess}")
-                                    
-                                    // Sincronizar imágenes
-                                    val imagesResult = apiService.syncRecipeImagesToMySQL(result.recipeId)
-                                    Log.d("CreateRecipe", "Imágenes sync: ${imagesResult.isSuccess}")
-                                    
-                                    // Mostrar resultado en UI thread
-                                    withContext(Dispatchers.Main) {
-                                        if (recipeResult.isSuccess && imagesResult.isSuccess) {
-                                            Toast.makeText(this@CreateRecipeActivity, "Sincronización completada", Toast.LENGTH_SHORT).show()
-                                        } else {
-                                            Toast.makeText(this@CreateRecipeActivity, "Sincronización con errores", Toast.LENGTH_SHORT).show()
-                                        }
-                                    }
-                                }
-                            } catch (e: Exception) {
-                                Log.e("CreateRecipe", "Error en sincronización background", e)
-                                withContext(Dispatchers.Main) {
-                                    Toast.makeText(this@CreateRecipeActivity, "Error sincronizando: ${e.message}", Toast.LENGTH_SHORT).show()
-                                }
-                            }
+                        // Actualizar la receta local con el ID de MySQL si es necesario
+                        // (opcional: mantener sincronización de IDs)
+                        withContext(Dispatchers.Main) {
+                            progressBar.visibility = View.GONE
+                            draftButton.isEnabled = true
+                            publishButton.isEnabled = true
+                            draftButton.text = "Borrador"
+                            publishButton.text = "Publicar"
                         }
+                        Toast.makeText(this@CreateRecipeActivity, "Receta publicada exitosamente", Toast.LENGTH_LONG).show()
+                    } else {
+                        val error = mysqlResult.exceptionOrNull()
+                        Log.e("CreateRecipeActivity", "Error publicando en MySQL: ${error?.message}")
+                        withContext(Dispatchers.Main) {
+                            progressBar.visibility = View.GONE
+                            draftButton.isEnabled = true
+                            publishButton.isEnabled = true
+                            draftButton.text = "Borrador"
+                            publishButton.text = "Publicar"
+                        }
+                        Toast.makeText(this@CreateRecipeActivity, "Receta guardada localmente. Error publicando: ${error?.message ?: "Error desconocido"}", Toast.LENGTH_LONG).show()
+                    }
+                } else {
+                    // Es borrador, solo guardado localmente
+                    Log.d("CreateRecipeActivity", "✓ Receta guardada como borrador (solo local)")
+                    withContext(Dispatchers.Main) {
+                        progressBar.visibility = View.GONE
+                        draftButton.isEnabled = true
+                        publishButton.isEnabled = true
+                        draftButton.text = "Borrador"
+                        publishButton.text = "Publicar"
+                    }
+                    Toast.makeText(this@CreateRecipeActivity, "Receta guardada como borrador", Toast.LENGTH_SHORT).show()
+                }
+                
+                // Navegar al dashboard pasando el correo (en el hilo principal)
+                withContext(Dispatchers.Main) {
+                    val emailToPass = currentUserEmail.ifEmpty {
+                        this@CreateRecipeActivity.intent.getStringExtra("user_email") ?: ""
                     }
                     
-                    finish() // Regresar inmediatamente
-                } else {
-                    Toast.makeText(this@CreateRecipeActivity, result.message, Toast.LENGTH_LONG).show()
+                    Log.d("CreateRecipeActivity", "Receta guardada - navegando a MainActivity (Dashboard) con email: '$emailToPass'")
+                    val intent = Intent(this@CreateRecipeActivity, MainActivity::class.java)
+                    intent.putExtra("user_id", currentUserId)
+                    intent.putExtra("user_email", emailToPass) // SIEMPRE pasar el correo
+                    if (currentUserName.isNotEmpty()) {
+                        intent.putExtra("user_name", currentUserName)
+                    }
+                    intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    startActivity(intent)
+                    finish()
                 }
             } catch (e: Exception) {
+                Log.e("CreateRecipeActivity", "✗ EXCEPCIÓN guardando receta: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    progressBar.visibility = View.GONE
+                    draftButton.isEnabled = true
+                    publishButton.isEnabled = true
+                    draftButton.text = "Borrador"
+                    publishButton.text = "Publicar"
+                }
                 Toast.makeText(this@CreateRecipeActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
             } finally {
-                // Rehabilitar botones
-                draftButton.isEnabled = true
-                publishButton.isEnabled = true
-                draftButton.text = "Borrador"
-                publishButton.text = "Publicar"
+                // Asegurar que el ProgressBar esté oculto y los botones habilitados
+                withContext(Dispatchers.Main) {
+                    progressBar.visibility = View.GONE
+                    draftButton.isEnabled = true
+                    publishButton.isEnabled = true
+                    draftButton.text = "Borrador"
+                    publishButton.text = "Publicar"
+                }
             }
         }
     }
@@ -380,5 +528,24 @@ class CreateRecipeActivity : AppCompatActivity() {
         
         // Agregar la vista al contenedor
         imagesContainer.addView(imageItemView)
+    }
+    
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // Guardar datos del usuario para preservarlos
+        outState.putLong("saved_user_id", currentUserId)
+        outState.putString("saved_user_name", currentUserName)
+        outState.putString("saved_user_email", currentUserEmail)
+        Log.d("CreateRecipeActivity", "Datos guardados en savedInstanceState - Email: '$currentUserEmail'")
+    }
+    
+    override fun onResume() {
+        super.onResume()
+        // Asegurar que tenemos el email más reciente del intent
+        val emailFromIntent = intent.getStringExtra("user_email") ?: ""
+        if (emailFromIntent.isNotEmpty() && emailFromIntent != currentUserEmail) {
+            currentUserEmail = emailFromIntent
+            Log.d("CreateRecipeActivity", "Email actualizado desde intent en onResume: '$currentUserEmail'")
+        }
     }
 }

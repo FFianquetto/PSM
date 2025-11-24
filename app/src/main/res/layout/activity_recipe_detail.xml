@@ -8,7 +8,7 @@
     android:background="@android:color/white"
     tools:context=".RecipeDetailActivity">
 
-    <!-- Header con botón de regreso -->
+    <!-- Header simplificado sin flecha -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -17,28 +17,15 @@
         android:padding="16dp"
         android:background="@color/primary_blue">
 
-        <ImageView
-            android:id="@+id/backButton"
-            android:layout_width="48dp"
-            android:layout_height="48dp"
-            android:src="@drawable/ic_arrow_back"
-            android:contentDescription="Volver"
-            app:tint="@android:color/white" />
-
         <TextView
-            android:layout_width="0dp"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
             android:text="Detalles de la Receta"
             android:textColor="@android:color/white"
             android:textSize="20sp"
             android:textStyle="bold"
             android:fontFamily="@font/natasans"
             android:gravity="center" />
-
-        <View
-            android:layout_width="48dp"
-            android:layout_height="48dp" />
     </LinearLayout>
 
     <!-- ScrollView para el contenido -->
@@ -104,6 +91,31 @@
                 android:layout_marginBottom="16dp"
                 android:gravity="center" />
 
+            <!-- Descripción de la receta -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Descripción"
+                android:textColor="@color/black"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/natasans"
+                android:layout_marginBottom="8dp" />
+
+            <TextView
+                android:id="@+id/recipeDescription"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Descripción de la receta"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:fontFamily="@font/natasans"
+                android:lineSpacingExtra="4dp"
+                android:layout_marginBottom="20dp"
+                android:background="@drawable/rounded_background"
+                android:backgroundTint="@color/light_gray"
+                android:padding="16dp" />
+
             <!-- Información del autor -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -168,6 +180,75 @@
                     android:gravity="center_vertical" />
             </LinearLayout>
 
+            <!-- Contadores de likes y dislikes -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:layout_marginBottom="24dp"
+                android:gravity="center">
+
+                <!-- Contador de likes -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:background="@drawable/rounded_background"
+                    android:backgroundTint="@color/light_gray"
+                    android:padding="12dp"
+                    android:layout_marginEnd="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="👍"
+                        android:textSize="20sp"
+                        android:layout_marginEnd="8dp" />
+
+                    <TextView
+                        android:id="@+id/likesCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="@color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/natasans" />
+                </LinearLayout>
+
+                <!-- Contador de dislikes -->
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:background="@drawable/rounded_background"
+                    android:backgroundTint="@color/light_gray"
+                    android:padding="12dp"
+                    android:layout_marginStart="8dp">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="👎"
+                        android:textSize="20sp"
+                        android:layout_marginEnd="8dp" />
+
+                    <TextView
+                        android:id="@+id/dislikesCount"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="@color/black"
+                        android:textSize="16sp"
+                        android:textStyle="bold"
+                        android:fontFamily="@font/natasans" />
+                </LinearLayout>
+            </LinearLayout>
+
             <!-- Sección de ingredientes -->
             <TextView
                 android:layout_width="match_parent"
@@ -217,6 +298,95 @@
                 android:background="@drawable/rounded_background"
                 android:backgroundTint="@color/light_gray"
                 android:padding="16dp" />
+
+            <!-- Sección de comentarios -->
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Comentarios"
+                android:textColor="@color/black"
+                android:textSize="20sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/natasans"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="16dp" />
+
+            <!-- RecyclerView para comentarios -->
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/commentsRecyclerView"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:nestedScrollingEnabled="false"
+                android:layout_marginBottom="16dp"
+                tools:listitem="@layout/item_comment" />
+
+            <!-- Mensaje cuando no hay comentarios -->
+            <TextView
+                android:id="@+id/noCommentsText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="No hay comentarios aún. ¡Sé el primero en comentar!"
+                android:textColor="@color/medium_gray"
+                android:textSize="16sp"
+                android:fontFamily="@font/natasans"
+                android:gravity="center"
+                android:padding="24dp"
+                android:visibility="gone"
+                android:layout_marginBottom="16dp"/>
+
+            <!-- Formulario para agregar comentario (solo si el usuario está logueado) -->
+            <LinearLayout
+                android:id="@+id/addCommentLayout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:background="@drawable/rounded_background"
+                android:backgroundTint="@color/light_gray"
+                android:padding="16dp"
+                android:layout_marginBottom="20dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Agregar comentario"
+                    android:textColor="@color/black"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:fontFamily="@font/natasans"
+                    android:layout_marginBottom="12dp"/>
+
+                <EditText
+                    android:id="@+id/commentEditText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:minHeight="100dp"
+                    android:hint="Escribe tu comentario aquí..."
+                    android:textColor="@color/black"
+                    android:textSize="15sp"
+                    android:fontFamily="@font/natasans"
+                    android:background="@drawable/rounded_background"
+                    android:backgroundTint="@android:color/white"
+                    android:padding="12dp"
+                    android:layout_marginBottom="12dp"
+                    android:gravity="top|start"
+                    android:inputType="textMultiLine"
+                    android:maxLines="5"/>
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/submitCommentButton"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Publicar comentario"
+                    android:textColor="@android:color/white"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:fontFamily="@font/natasans"
+                    android:background="@drawable/rounded_background"
+                    android:backgroundTint="@color/primary_blue"
+                    android:padding="12dp"/>
+
+            </LinearLayout>
 
             <!-- Información adicional -->
             <LinearLayout
@@ -288,5 +458,104 @@
 
         </LinearLayout>
     </ScrollView>
+
+    <!-- Navbar en el footer -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="80dp"
+        android:orientation="horizontal"
+        android:background="@color/primary_blue"
+        android:gravity="center">
+
+        <!-- Inicio -->
+        <LinearLayout
+            android:id="@+id/homeButton"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground">
+
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_home"
+                android:contentDescription="Inicio"
+                app:tint="@android:color/white" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Inicio"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/natasans"
+                android:layout_marginTop="6dp" />
+        </LinearLayout>
+
+        <!-- Crear publicación -->
+        <LinearLayout
+            android:id="@+id/createButton"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground">
+
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_add"
+                android:contentDescription="Crear"
+                app:tint="@android:color/white" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Crear"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/natasans"
+                android:layout_marginTop="6dp" />
+        </LinearLayout>
+
+        <!-- Perfil -->
+        <LinearLayout
+            android:id="@+id/profileButton"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true"
+            android:background="?attr/selectableItemBackground">
+
+            <ImageView
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:src="@drawable/ic_profile"
+                android:contentDescription="Perfil"
+                app:tint="@android:color/white" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Perfil"
+                android:textColor="@android:color/white"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/natasans"
+                android:layout_marginTop="6dp" />
+        </LinearLayout>
+    </LinearLayout>
 
 </LinearLayout>

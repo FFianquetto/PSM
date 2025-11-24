@@ -8,10 +8,16 @@ import android.os.Bundle
 import android.util.Log
 import android.view.View
 import android.widget.Button
+import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
+import android.view.inputmethod.EditorInfo
+import android.view.inputmethod.InputMethodManager
+import android.text.TextWatcher
+import android.text.Editable
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -25,15 +31,18 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
-import java.text.SimpleDateFormat
-import java.util.*
+import com.example.ejemplo2.data.database.AppDatabase
+import com.example.ejemplo2.data.entity.Favorite
 
 class ProfileActivity : AppCompatActivity() {
     
     private lateinit var hybridRepository: HybridUserRepository
     private lateinit var recipeRepository: RecipeRepository
     private lateinit var userRecipesAdapter: UserRecipesAdapter
+    private lateinit var likedRecipesAdapter: UserRecipesAdapter
     private var currentUserId: Long = -1
+    private var currentUserEmail: String = ""
+    private var allFavorites: List<Favorite> = emptyList() // Lista completa de favoritos para restaurar después de búsqueda
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,9 +54,31 @@ class ProfileActivity : AppCompatActivity() {
         
         // Configurar RecyclerView para recetas del usuario
         setupUserRecipesRecyclerView()
+        
+        // Configurar RecyclerView para recetas con like
+        setupLikedRecipesRecyclerView()
+        
+        // Configurar barra de búsqueda de favoritos
+        setupFavoritesSearchBar()
 
-        // Obtener ID del usuario desde el intent
+        // Obtener ID del usuario y email desde el intent
         currentUserId = intent.getLongExtra("user_id", -1)
+        
+        // SIEMPRE obtener el email del intent primero, y si viene vacío, intentar preservar uno existente
+        val emailFromIntent = intent.getStringExtra("user_email") ?: ""
+        currentUserEmail = if (emailFromIntent.isNotEmpty()) {
+            emailFromIntent
+        } else {
+            // Intentar restaurar desde savedInstanceState si existe
+            savedInstanceState?.getString("saved_user_email") ?: ""
+        }
+        
+        // Restaurar userId desde savedInstanceState si no viene en el intent
+        if (currentUserId == -1L && savedInstanceState != null) {
+            currentUserId = savedInstanceState.getLong("saved_user_id", -1)
+        }
+        
+        Log.d("ProfileActivity", "Email recibido del intent: '$emailFromIntent', Email final: '$currentUserEmail', UserId: $currentUserId")
 
         // Referencias a los elementos del layout
         val profileAvatar = findViewById<ImageView>(R.id.profileAvatar)
@@ -230,6 +261,10 @@ class ProfileActivity : AppCompatActivity() {
         val labelPhone = findViewById<TextView>(R.id.labelPhone)
         val labelAddress = findViewById<TextView>(R.id.labelAddress)
 
+        // Guardar email del usuario actual
+        currentUserEmail = user.email
+        Log.d("ProfileActivity", "updateUI: Email guardado desde usuario: '$currentUserEmail'")
+
         // Actualizar información básica
         textViewFullName.text = "${user.name} ${user.lastName}"
         textViewEmail.text = user.email
@@ -269,6 +304,14 @@ class ProfileActivity : AppCompatActivity() {
         
         // Cargar recetas del usuario
         loadUserRecipes()
+        
+        // Cargar publicaciones guardadas (favoritos) desde SQLite
+        if (currentUserId != -1L) {
+            Log.d("ProfileActivity", "updateUI: Cargando publicaciones guardadas desde SQLite...")
+            loadSavedRecipes()
+        } else {
+            Log.e("ProfileActivity", "updateUI: ⚠️ Usuario no logueado - no se pueden cargar publicaciones guardadas")
+        }
     }
     
     private fun setupUserRecipesRecyclerView() {
@@ -284,34 +327,247 @@ class ProfileActivity : AppCompatActivity() {
         recyclerView.adapter = userRecipesAdapter
     }
     
+    private fun setupLikedRecipesRecyclerView() {
+        val recyclerView = findViewById<RecyclerView>(R.id.likedRecipesRecyclerView)
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        
+        likedRecipesAdapter = UserRecipesAdapter(
+            onRecipeClick = { recipe ->
+                navigateToRecipeDetail(recipe)
+            }
+        )
+        
+        recyclerView.adapter = likedRecipesAdapter
+    }
+    
+    /**
+     * Configurar barra de búsqueda de favoritos
+     */
+    private fun setupFavoritesSearchBar() {
+        val searchEditText = findViewById<EditText>(R.id.favoritesSearchEditText)
+        val searchButton = findViewById<ImageButton>(R.id.favoritesSearchButton)
+        
+        // Listener para el botón de búsqueda
+        searchButton.setOnClickListener {
+            performFavoritesSearch()
+        }
+        
+        // Listener para cuando se presiona Enter en el teclado
+        searchEditText.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) {
+                performFavoritesSearch()
+                true
+            } else {
+                false
+            }
+        }
+        
+        // Listener para búsqueda en tiempo real mientras se escribe
+        searchEditText.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+            override fun afterTextChanged(s: Editable?) {
+                val query = s?.toString()?.trim() ?: ""
+                if (query.isEmpty()) {
+                    // Si está vacío, mostrar todos los favoritos
+                    displayFavorites(allFavorites)
+                } else {
+                    // Realizar búsqueda
+                    performFavoritesSearch()
+                }
+            }
+        })
+    }
+    
     private fun loadUserRecipes() {
-        if (currentUserId == -1L) return
+        if (currentUserId == -1L) {
+            Log.e("ProfileActivity", "loadUserRecipes: Usuario no logueado - currentUserId=$currentUserId")
+            return
+        }
+        
+        Log.d("ProfileActivity", "=== CARGANDO MIS RECETAS DESDE SQLite ===")
+        Log.d("ProfileActivity", "User ID (SQLite): $currentUserId")
         
         lifecycleScope.launch {
             try {
-                val recipes = recipeRepository.getRecipesByAuthor(currentUserId)
-                recipes.collect { recipeList ->
+                val db = AppDatabase.getDatabase(this@ProfileActivity)
+                val recipeDao = db.recipeDao()
+                
+                // Obtener recetas del usuario desde SQLite donde el usuario es el autor
+                val recipesFlow = recipeDao.getRecipesByAuthor(currentUserId)
+                
+                recipesFlow.collect { recipeList ->
+                    Log.d("ProfileActivity", "✓ Recetas del usuario obtenidas desde SQLite: ${recipeList.size}")
+                    
                     val noRecipesText = findViewById<TextView>(R.id.noRecipesText)
                     
-                    if (recipeList.isEmpty()) {
-                        noRecipesText.visibility = TextView.VISIBLE
-                        findViewById<RecyclerView>(R.id.userRecipesRecyclerView).visibility = RecyclerView.GONE
-                    } else {
-                        noRecipesText.visibility = TextView.GONE
-                        findViewById<RecyclerView>(R.id.userRecipesRecyclerView).visibility = RecyclerView.VISIBLE
-                        userRecipesAdapter.updateRecipes(recipeList)
+                    withContext(Dispatchers.Main) {
+                        if (recipeList.isEmpty()) {
+                            Log.d("ProfileActivity", "No hay recetas del usuario - mostrando mensaje")
+                            noRecipesText.visibility = TextView.VISIBLE
+                            findViewById<RecyclerView>(R.id.userRecipesRecyclerView).visibility = RecyclerView.GONE
+                        } else {
+                            Log.d("ProfileActivity", "✓ Mostrando ${recipeList.size} recetas del usuario")
+                            noRecipesText.visibility = TextView.GONE
+                            findViewById<RecyclerView>(R.id.userRecipesRecyclerView).visibility = RecyclerView.VISIBLE
+                            userRecipesAdapter.updateRecipes(recipeList)
+                        }
                     }
                 }
             } catch (e: Exception) {
-                Log.e("ProfileActivity", "Error cargando recetas del usuario: ${e.message}", e)
-                Toast.makeText(this@ProfileActivity, "Error cargando recetas", Toast.LENGTH_SHORT).show()
+                Log.e("ProfileActivity", "✗ EXCEPCIÓN cargando recetas del usuario: ${e.message}", e)
+                Log.e("ProfileActivity", "Stack trace: ${e.stackTrace.joinToString("\n")}")
+                withContext(Dispatchers.Main) {
+                    val noRecipesText = findViewById<TextView>(R.id.noRecipesText)
+                    noRecipesText.visibility = TextView.VISIBLE
+                    findViewById<RecyclerView>(R.id.userRecipesRecyclerView).visibility = RecyclerView.GONE
+                    Toast.makeText(this@ProfileActivity, "Error cargando recetas: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
             }
         }
+    }
+    
+    /**
+     * Cargar publicaciones guardadas (favoritos) desde SQLite
+     */
+    private fun loadSavedRecipes() {
+        if (currentUserId == -1L) {
+            Log.e("ProfileActivity", "loadSavedRecipes: Usuario no logueado - currentUserId=$currentUserId")
+            return
+        }
+        
+        Log.d("ProfileActivity", "=== CARGANDO PUBLICACIONES GUARDADAS (FAVORITOS) ===")
+        Log.d("ProfileActivity", "User ID (SQLite): $currentUserId")
+        
+        lifecycleScope.launch {
+            try {
+                val db = AppDatabase.getDatabase(this@ProfileActivity)
+                val favoriteDao = db.favoriteDao()
+                
+                // Obtener favoritos desde SQLite
+                val favorites = withContext(Dispatchers.IO) {
+                    favoriteDao.getFavoritesByUserId(currentUserId)
+                }
+                
+                // Guardar lista completa de favoritos
+                allFavorites = favorites
+                
+                Log.d("ProfileActivity", "✓ Publicaciones guardadas obtenidas: ${favorites.size}")
+                
+                // Mostrar favoritos
+                displayFavorites(favorites)
+            } catch (e: Exception) {
+                Log.e("ProfileActivity", "✗ EXCEPCIÓN cargando publicaciones guardadas: ${e.message}", e)
+                Log.e("ProfileActivity", "Stack trace: ${e.stackTrace.joinToString("\n")}")
+                withContext(Dispatchers.Main) {
+                    val noLikedRecipesText = findViewById<TextView>(R.id.noLikedRecipesText)
+                    noLikedRecipesText.visibility = TextView.VISIBLE
+                    findViewById<RecyclerView>(R.id.likedRecipesRecyclerView).visibility = RecyclerView.GONE
+                }
+            }
+        }
+    }
+    
+    /**
+     * Realizar búsqueda de favoritos
+     */
+    private fun performFavoritesSearch() {
+        val searchEditText = findViewById<EditText>(R.id.favoritesSearchEditText)
+        val query = searchEditText.text.toString().trim()
+        
+        // Ocultar teclado
+        val imm = getSystemService(INPUT_METHOD_SERVICE) as InputMethodManager
+        imm.hideSoftInputFromWindow(searchEditText.windowToken, 0)
+        
+        if (query.isEmpty()) {
+            // Si está vacío, mostrar todos los favoritos
+            displayFavorites(allFavorites)
+            return
+        }
+        
+        lifecycleScope.launch {
+            try {
+                val db = AppDatabase.getDatabase(this@ProfileActivity)
+                val favoriteDao = db.favoriteDao()
+                
+                // Realizar búsqueda con el patrón LIKE
+                val searchPattern = "%$query%"
+                val searchResults = withContext(Dispatchers.IO) {
+                    favoriteDao.searchFavorites(currentUserId, searchPattern)
+                }
+                
+                Log.d("ProfileActivity", "✓ Resultados de búsqueda: ${searchResults.size}")
+                
+                // Mostrar resultados
+                displayFavorites(searchResults)
+                
+            } catch (e: Exception) {
+                Log.e("ProfileActivity", "✗ EXCEPCIÓN buscando favoritos: ${e.message}", e)
+                Toast.makeText(this@ProfileActivity, "Error buscando favoritos: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+    
+    /**
+     * Mostrar favoritos en el RecyclerView
+     */
+    private fun displayFavorites(favorites: List<Favorite>) {
+        lifecycleScope.launch {
+            // Convertir Favorite a Recipe para el adaptador
+            val savedRecipes = favorites.map { favorite ->
+                Recipe(
+                    id = favorite.recipeId,
+                    title = favorite.title,
+                    description = favorite.description,
+                    ingredients = "", // No guardamos ingredientes en favoritos
+                    steps = "", // No guardamos pasos en favoritos
+                    authorId = -1L, // No tenemos authorId en favoritos
+                    authorName = favorite.authorName,
+                    tags = favorite.tags,
+                    cookingTime = favorite.cookingTime,
+                    servings = favorite.servings,
+                    rating = favorite.rating,
+                    isPublished = true, // Asumimos que están publicadas
+                    createdAt = favorite.createdAt,
+                    updatedAt = favorite.createdAt
+                )
+            }
+            
+            val noLikedRecipesText = findViewById<TextView>(R.id.noLikedRecipesText)
+            
+            withContext(Dispatchers.Main) {
+                if (savedRecipes.isEmpty()) {
+                    Log.d("ProfileActivity", "No hay publicaciones guardadas - mostrando mensaje")
+                    noLikedRecipesText.visibility = TextView.VISIBLE
+                    findViewById<RecyclerView>(R.id.likedRecipesRecyclerView).visibility = RecyclerView.GONE
+                } else {
+                    Log.d("ProfileActivity", "✓ Mostrando ${savedRecipes.size} publicaciones guardadas")
+                    noLikedRecipesText.visibility = TextView.GONE
+                    findViewById<RecyclerView>(R.id.likedRecipesRecyclerView).visibility = RecyclerView.VISIBLE
+                    likedRecipesAdapter.updateRecipes(savedRecipes)
+                }
+            }
+        }
+    }
+    
+    override fun onSaveInstanceState(outState: Bundle) {
+        super.onSaveInstanceState(outState)
+        // Guardar datos del usuario para preservarlos
+        outState.putLong("saved_user_id", currentUserId)
+        outState.putString("saved_user_email", currentUserEmail)
+        Log.d("ProfileActivity", "Datos guardados en savedInstanceState - Email: '$currentUserEmail'")
     }
     
     private fun navigateToRecipeDetail(recipe: Recipe) {
         val intent = Intent(this, RecipeDetailActivity::class.java)
         intent.putExtra("recipe_id", recipe.id)
+        intent.putExtra("user_id", currentUserId)
+        // SIEMPRE pasar el email
+        val emailToPass = currentUserEmail.ifEmpty { 
+            // Intentar obtener del intent original si está vacío
+            this.intent.getStringExtra("user_email") ?: "" 
+        }
+        intent.putExtra("user_email", emailToPass)
         startActivity(intent)
     }
     
@@ -322,8 +578,23 @@ class ProfileActivity : AppCompatActivity() {
         // Botón Inicio (navegar a MainActivity)
         val homeButton = findViewById<View>(R.id.homeButton)
         homeButton.setOnClickListener {
+            // SIEMPRE pasar el email, incluso si está vacío
+            val emailToPass = currentUserEmail.ifEmpty {
+                // Intentar obtener del intent original si está vacío
+                this.intent.getStringExtra("user_email") ?: ""
+            }
+            
+            Log.d("ProfileActivity", "Navegando a MainActivity con email: '$emailToPass'")
             val intent = Intent(this, MainActivity::class.java)
             intent.putExtra("user_id", currentUserId)
+            intent.putExtra("user_email", emailToPass)
+            
+            // Si tenemos nombre de usuario, también pasarlo
+            val userName = this.intent.getStringExtra("user_name")
+            if (!userName.isNullOrEmpty()) {
+                intent.putExtra("user_name", userName)
+            }
+            
             startActivity(intent)
         }
 
@@ -331,8 +602,10 @@ class ProfileActivity : AppCompatActivity() {
         val createButton = findViewById<View>(R.id.createButton)
         createButton.setOnClickListener {
             if (currentUserId != -1L) {
+                Log.d("ProfileActivity", "Navegando a CreateRecipeActivity con email: '$currentUserEmail'")
                 val intent = Intent(this, CreateRecipeActivity::class.java)
                 intent.putExtra("user_id", currentUserId)
+                intent.putExtra("user_email", currentUserEmail)
                 startActivity(intent)
             } else {
                 Toast.makeText(this, "Debes iniciar sesión para crear recetas", Toast.LENGTH_SHORT).show()

@@ -9,13 +9,16 @@ import com.example.ejemplo2.R
 import com.example.ejemplo2.data.entity.Recipe
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.TimeZone
 
 class UserRecipesAdapter(
     private var recipes: List<Recipe> = emptyList(),
     private val onRecipeClick: (Recipe) -> Unit = {}
 ) : RecyclerView.Adapter<UserRecipesAdapter.RecipeViewHolder>() {
 
-    private val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+    private val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).apply {
+        timeZone = TimeZone.getTimeZone("America/Mexico_City")
+    }
 
     class RecipeViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val titleTextView: TextView = itemView.findViewById(R.id.recipeTitle)
@@ -40,12 +43,12 @@ class UserRecipesAdapter(
         
         // Configurar estado
         if (recipe.isPublished) {
-            holder.statusTextView.text = "Publicada"
+            holder.statusTextView.text = holder.itemView.context.getString(R.string.profile_recipe_status_published)
             holder.statusTextView.setBackgroundColor(
                 holder.itemView.context.getColor(R.color.vibrant_orange)
             )
         } else {
-            holder.statusTextView.text = "Borrador"
+            holder.statusTextView.text = holder.itemView.context.getString(R.string.profile_recipe_status_draft)
             holder.statusTextView.setBackgroundColor(
                 holder.itemView.context.getColor(android.R.color.darker_gray)
             )

@@ -418,6 +418,7 @@ class EditProfileActivity : AppCompatActivity() {
         homeButton.setOnClickListener {
             val intent = Intent(this, MainActivity::class.java)
             intent.putExtra("user_id", currentUserId)
+            intent.putExtra("user_email", currentUser?.email ?: "")
             startActivity(intent)
         }
 
@@ -427,6 +428,8 @@ class EditProfileActivity : AppCompatActivity() {
             if (currentUserId != -1L) {
                 val intent = Intent(this, CreateRecipeActivity::class.java)
                 intent.putExtra("user_id", currentUserId)
+                intent.putExtra("user_name", "${currentUser?.name} ${currentUser?.lastName}")
+                intent.putExtra("user_email", currentUser?.email ?: "")
                 startActivity(intent)
             } else {
                 Toast.makeText(this, "Debes iniciar sesión para crear recetas", Toast.LENGTH_SHORT).show()
@@ -439,6 +442,7 @@ class EditProfileActivity : AppCompatActivity() {
             if (currentUserId != -1L) {
                 val intent = Intent(this, ProfileActivity::class.java)
                 intent.putExtra("user_id", currentUserId)
+                intent.putExtra("user_email", currentUser?.email ?: "")
                 startActivity(intent)
             } else {
                 Toast.makeText(this, "Debes iniciar sesión para ver tu perfil", Toast.LENGTH_SHORT).show()

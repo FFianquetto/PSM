@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">Ejemplo2</string>
+    <string name="profile_recipe_status_draft">Borrador</string>
+    <string name="profile_recipe_status_published">Publicada</string>
 </resources>

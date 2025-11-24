@@ -9,6 +9,7 @@ import com.example.ejemplo2.R
 import com.example.ejemplo2.data.entity.User
 import java.text.SimpleDateFormat
 import java.util.*
+import java.util.TimeZone
 
 class UsersAdapter(private val users: List<User>) : RecyclerView.Adapter<UsersAdapter.UserViewHolder>() {
 
@@ -33,7 +34,9 @@ class UsersAdapter(private val users: List<User>) : RecyclerView.Adapter<UsersAd
         holder.textViewUserAlias.text = "@${user.alias}"
         
         // Formatear fecha de registro
-        val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+        val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).apply {
+            timeZone = TimeZone.getTimeZone("America/Mexico_City")
+        }
         val registrationDate = Date(user.createdAt)
         holder.textViewRegistrationDate.text = "Registrado: ${dateFormat.format(registrationDate)}"
     }

@@ -9,6 +9,7 @@ data class Recipe(
     val id: Long = 0,
     
     val title: String,
+    val description: String = "", // Descripción de la receta
     val ingredients: String, // Lista de ingredientes como texto separado por comas
     val steps: String, // Pasos de preparación
     val imagePath: String? = null, // Ruta de la imagen

@@ -7,14 +7,14 @@
     android:background="@android:color/white"
     tools:context=".MainActivity">
 
-    <!-- Header con logo y barra de búsqueda -->
+    <!-- Header con logo -->
     <LinearLayout
         android:id="@+id/headerLayout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:background="@color/primary_blue"
-        android:padding="24dp"
+        android:padding="16dp"
         android:gravity="center_vertical"
         android:layout_alignParentTop="true">
 
@@ -36,49 +36,152 @@
 
         </LinearLayout>
 
-        <!-- Barra de búsqueda -->
-        <LinearLayout
+        <View
             android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:orientation="horizontal"
-            android:background="@drawable/rounded_background"
-            android:gravity="center_vertical"
-            android:paddingHorizontal="16dp">
-
-            <ImageView
-                android:layout_width="28dp"
-                android:layout_height="28dp"
-                android:src="@drawable/ic_search"
-                app:tint="#666666"
-                android:contentDescription="Buscar" />
-
-            <EditText
-                android:id="@+id/searchEditText"
-                android:layout_width="0dp"
-                android:layout_height="52dp"
-                android:layout_weight="1"
-                android:background="@null"
-                android:hint="Buscar receta..."
-                android:textColor="#333333"
-                android:padding="16dp"
-                android:textSize="18sp"
-                android:textStyle="bold"
-                android:fontFamily="@font/natasans"
-                android:imeOptions="actionSearch"
-                android:singleLine="true" />
-        </LinearLayout>
+            android:layout_height="1dp"
+            android:layout_weight="1" />
 
         <!-- Botón de filtro -->
         <ImageButton
             android:id="@+id/filterButton"
             android:layout_width="52dp"
             android:layout_height="52dp"
-            android:layout_marginStart="16dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:src="@drawable/ic_filter"
             android:contentDescription="Filtros"
             app:tint="@android:color/white" />
+    </LinearLayout>
+
+    <!-- Barra de búsqueda centrada -->
+    <LinearLayout
+        android:id="@+id/searchBarLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/headerLayout"
+        android:orientation="horizontal"
+        android:background="@color/primary_blue"
+        android:paddingHorizontal="20dp"
+        android:paddingTop="12dp"
+        android:paddingBottom="12dp"
+        android:gravity="center">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="48dp"
+            android:orientation="horizontal"
+            android:background="@drawable/rounded_background"
+            android:backgroundTint="#20000000"
+            android:gravity="center_vertical"
+            android:paddingHorizontal="12dp"
+            android:paddingVertical="0dp">
+
+            <EditText
+                android:id="@+id/searchEditText"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:background="@null"
+                android:hint="Buscar receta..."
+                android:textColorHint="#FFFFFF"
+                android:textColor="#FFFFFF"
+                android:textSize="14sp"
+                android:fontFamily="@font/natasans"
+                android:imeOptions="actionSearch"
+                android:singleLine="true"
+                android:padding="0dp"
+                android:gravity="center_vertical" />
+
+            <ImageButton
+                android:id="@+id/searchButton"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginStart="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:src="@drawable/ic_search"
+                android:contentDescription="Buscar"
+                app:tint="@android:color/white" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Indicador de carga para búsqueda -->
+    <ProgressBar
+        android:id="@+id/searchProgressBar"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/searchBarLayout"
+        android:layout_centerHorizontal="true"
+        android:layout_marginTop="8dp"
+        android:visibility="gone"
+        android:indeterminateTint="@color/primary_blue" />
+
+    <!-- Mensaje cuando no hay resultados -->
+    <TextView
+        android:id="@+id/searchEmptyText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/searchProgressBar"
+        android:layout_marginTop="12dp"
+        android:layout_marginHorizontal="20dp"
+        android:gravity="center"
+        android:text="No se encontraron publicaciones con ese término de búsqueda."
+        android:textColor="@color/medium_gray"
+        android:textSize="16sp"
+        android:fontFamily="@font/natasans"
+        android:background="@drawable/rounded_background"
+        android:backgroundTint="#1A000000"
+        android:padding="12dp"
+        android:visibility="gone" />
+
+    <!-- Saludo al usuario -->
+    <LinearLayout
+        android:id="@+id/userGreetingLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@id/searchEmptyText"
+        android:orientation="horizontal"
+        android:background="@color/light_gray"
+        android:padding="16dp"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="¡Hola, "
+            android:textColor="@color/black"
+            android:textSize="16sp"
+            android:fontFamily="@font/natasans" />
+
+        <TextView
+            android:id="@+id/userNameText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Usuario"
+            android:textColor="@color/primary_blue"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:fontFamily="@font/natasans" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="!"
+            android:textColor="@color/black"
+            android:textSize="16sp"
+            android:fontFamily="@font/natasans" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <TextView
+            android:id="@+id/userEmailText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="user@email.com"
+            android:textColor="@color/medium_gray"
+            android:textSize="12sp"
+            android:fontFamily="@font/natasans" />
     </LinearLayout>
 
     <!-- Lista de recetas -->
@@ -86,10 +189,11 @@
         android:id="@+id/recipesRecyclerView"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:layout_below="@id/headerLayout"
+        android:layout_below="@id/userGreetingLayout"
         android:layout_above="@id/bottomNavigationLayout"
         android:padding="24dp"
-        android:clipToPadding="false" />
+        android:clipToPadding="false"
+        android:visibility="visible" />
 
     <!-- Navbar en el footer -->
     <LinearLayout

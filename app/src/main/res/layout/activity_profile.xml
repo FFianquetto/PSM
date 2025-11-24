@@ -53,6 +53,13 @@
                 android:gravity="center"
                 android:layout_marginBottom="24dp"/>
 
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:visibility="gone" />
+
             <!-- Avatar -->
             <LinearLayout
                 android:layout_width="match_parent"
@@ -242,7 +249,7 @@
 
             </LinearLayout>
 
-            <!-- Sección de Mis Recetas -->
+            <!-- Sección de Recetas Publicadas -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -252,7 +259,7 @@
                 <TextView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="Mis Recetas"
+                    android:text="Recetas publicadas"
                     android:textColor="@color/black"
                     android:textSize="20sp"
                     android:textStyle="bold"
@@ -260,17 +267,133 @@
                     android:layout_marginBottom="16dp"/>
 
                 <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/userRecipesRecyclerView"
+                    android:id="@+id/publishedRecipesRecyclerView"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:nestedScrollingEnabled="false"
                     tools:listitem="@layout/item_recipe_simple"/>
 
                 <TextView
-                    android:id="@+id/noRecipesText"
+                    android:id="@+id/noPublishedRecipesText"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:text="No tienes recetas publicadas aún"
+                    android:text="Aún no has publicado recetas"
+                    android:textColor="@color/medium_gray"
+                    android:textSize="16sp"
+                    android:fontFamily="@font/natasans"
+                    android:gravity="center"
+                    android:padding="24dp"
+                    android:visibility="gone"/>
+
+            </LinearLayout>
+
+            <!-- Sección de Borradores -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="24dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Borradores"
+                    android:textColor="@color/black"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:fontFamily="@font/natasans"
+                    android:layout_marginBottom="16dp"/>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/draftRecipesRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    tools:listitem="@layout/item_recipe_simple"/>
+
+                <TextView
+                    android:id="@+id/noDraftRecipesText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="No tienes recetas en borrador"
+                    android:textColor="@color/medium_gray"
+                    android:textSize="16sp"
+                    android:fontFamily="@font/natasans"
+                    android:gravity="center"
+                    android:padding="24dp"
+                    android:visibility="gone"/>
+
+            </LinearLayout>
+
+            <!-- Sección de Publicaciones Guardadas -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:layout_marginTop="24dp">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Publicaciones favoritas"
+                    android:textColor="@color/black"
+                    android:textSize="20sp"
+                    android:textStyle="bold"
+                    android:fontFamily="@font/natasans"
+                    android:layout_marginBottom="16dp"/>
+
+                <!-- Barra de búsqueda para favoritos -->
+                <LinearLayout
+                    android:id="@+id/favoritesSearchBarLayout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:background="@drawable/rounded_background"
+                    android:backgroundTint="@color/light_gray"
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="12dp"
+                    android:paddingVertical="8dp"
+                    android:layout_marginBottom="16dp">
+
+                    <android.widget.EditText
+                        android:id="@+id/favoritesSearchEditText"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:background="@null"
+                        android:hint="Buscar por título, autor o fecha..."
+                        android:textColorHint="@color/medium_gray"
+                        android:textColor="@color/black"
+                        android:textSize="14sp"
+                        android:fontFamily="@font/natasans"
+                        android:imeOptions="actionSearch"
+                        android:singleLine="true"
+                        android:padding="8dp"
+                        android:gravity="center_vertical" />
+
+                    <ImageButton
+                        android:id="@+id/favoritesSearchButton"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:layout_marginStart="8dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_search"
+                        android:contentDescription="Buscar favoritos"
+                        app:tint="@color/primary_blue" />
+                </LinearLayout>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/likedRecipesRecyclerView"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:nestedScrollingEnabled="false"
+                    tools:listitem="@layout/item_recipe_simple"/>
+
+                <TextView
+                    android:id="@+id/noLikedRecipesText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="No has guardado ninguna publicación aún"
                     android:textColor="@color/medium_gray"
                     android:textSize="16sp"
                     android:fontFamily="@font/natasans"

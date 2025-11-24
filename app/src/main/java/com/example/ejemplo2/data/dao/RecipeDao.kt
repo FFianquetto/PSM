@@ -22,7 +22,7 @@ interface RecipeDao {
     @Query("SELECT * FROM recipes WHERE isPublished = 0 AND authorId = :authorId ORDER BY createdAt DESC")
     fun getDraftsByAuthor(authorId: Long): Flow<List<Recipe>>
     
-    @Query("SELECT * FROM recipes WHERE title LIKE :query OR ingredients LIKE :query OR steps LIKE :query ORDER BY createdAt DESC")
+    @Query("SELECT * FROM recipes WHERE title LIKE :query OR description LIKE :query OR authorName LIKE :query ORDER BY createdAt DESC")
     fun searchRecipes(query: String): Flow<List<Recipe>>
     
     @Query("SELECT * FROM recipes WHERE tags LIKE :tag ORDER BY createdAt DESC")
@@ -45,4 +45,7 @@ interface RecipeDao {
     
     @Query("UPDATE recipes SET isPublished = :isPublished, updatedAt = :updatedAt WHERE id = :recipeId")
     suspend fun updateRecipeStatus(recipeId: Long, isPublished: Boolean, updatedAt: Long)
+    
+    @Query("DELETE FROM recipes")
+    suspend fun deleteAllRecipes()
 }

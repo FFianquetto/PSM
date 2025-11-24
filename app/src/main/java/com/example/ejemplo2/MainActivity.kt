@@ -4,6 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import android.view.View
+import android.widget.ProgressBar
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -302,6 +303,8 @@ class MainActivity : AppCompatActivity() {
     private fun performSearch() {
         val searchEditText = findViewById<android.widget.EditText>(R.id.searchEditText)
         val query = searchEditText.text.toString().trim()
+        val emptyTextView = findViewById<TextView>(R.id.searchEmptyText)
+        emptyTextView.visibility = View.GONE
         
         if (query.isEmpty()) {
             Toast.makeText(this, "Ingresa un término de búsqueda", Toast.LENGTH_SHORT).show()
@@ -314,6 +317,10 @@ class MainActivity : AppCompatActivity() {
         // Ocultar teclado
         val imm = getSystemService(android.content.Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
         imm.hideSoftInputFromWindow(searchEditText.windowToken, 0)
+        
+        // Mostrar indicador de carga
+        val progressBar = findViewById<ProgressBar>(R.id.searchProgressBar)
+        progressBar.visibility = View.VISIBLE
         
         lifecycleScope.launch {
             try {
@@ -331,24 +338,35 @@ class MainActivity : AppCompatActivity() {
                             }.awaitAll()
                         }
                         withContext(Dispatchers.Main) {
+                            progressBar.visibility = View.GONE
                             recipeFeedAdapter.updateRecipes(feedItems)
+                            emptyTextView.visibility = View.GONE
                             Toast.makeText(this@MainActivity, "${recipes.size} receta(s) encontrada(s)", Toast.LENGTH_SHORT).show()
                         }
                     } else {
                         withContext(Dispatchers.Main) {
+                            progressBar.visibility = View.GONE
                             recipeFeedAdapter.updateRecipes(emptyList())
+                            emptyTextView.visibility = View.VISIBLE
+                            emptyTextView.text = "No encontramos publicaciones que coincidan con \"${query}\"."
                             Toast.makeText(this@MainActivity, "No se encontraron recetas", Toast.LENGTH_SHORT).show()
                         }
                     }
                 } else {
                     Log.e("MainActivity", "✗ Error buscando recetas: ${result.exceptionOrNull()?.message}")
                     withContext(Dispatchers.Main) {
+                        progressBar.visibility = View.GONE
+                        emptyTextView.visibility = View.VISIBLE
+                        emptyTextView.text = "Ocurrió un error al buscar recetas. Intenta nuevamente."
                         Toast.makeText(this@MainActivity, "Error buscando recetas: ${result.exceptionOrNull()?.message}", Toast.LENGTH_SHORT).show()
                     }
                 }
             } catch (e: Exception) {
                 Log.e("MainActivity", "✗ EXCEPCIÓN en performSearch: ${e.message}", e)
                 withContext(Dispatchers.Main) {
+                    progressBar.visibility = View.GONE
+                    emptyTextView.visibility = View.VISIBLE
+                    emptyTextView.text = "Ocurrió un error al buscar recetas. Intenta nuevamente."
                     Toast.makeText(this@MainActivity, "Error buscando recetas: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }

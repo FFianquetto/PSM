@@ -1,0 +1,267 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@android:color/white"
+    android:layout_marginBottom="16dp"
+    android:elevation="4dp">
+
+    <!-- Header de la receta con autor -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:gravity="center_vertical">
+
+        <!-- Avatar del autor (por ahora un círculo simple) -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/circle_background"
+            android:backgroundTint="@color/primary_blue" />
+
+        <!-- Información del autor -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginStart="12dp">
+
+            <TextView
+                android:id="@+id/authorName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Autor"
+                android:textColor="@color/black"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:fontFamily="@font/natasans" />
+
+            <TextView
+                android:id="@+id/authorAlias"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@autor"
+                android:textColor="@color/medium_gray"
+                android:textSize="14sp"
+                android:fontFamily="@font/natasans" />
+        </LinearLayout>
+
+        <!-- Botón de más opciones (oculto) -->
+        <ImageView
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_more"
+            android:contentDescription="Más opciones"
+            app:tint="@color/black"
+            android:padding="4dp"
+            android:visibility="gone" />
+    </LinearLayout>
+
+    <!-- Imagen principal de la receta -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="300dp"
+        android:background="@color/light_gray">
+
+        <ImageView
+            android:id="@+id/recipeImage"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_no_recipes"
+            android:contentDescription="Imagen de receta" />
+
+    </FrameLayout>
+
+    <!-- Sección de interacciones (like, comentarios, compartir) -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="16dp"
+        android:gravity="center_vertical">
+
+        <!-- Botón de like -->
+        <ImageView
+            android:id="@+id/likeButton"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:src="@drawable/ic_thumb_up"
+            android:contentDescription="Me gusta"
+            app:tint="@color/medium_gray"
+            android:padding="2dp"
+            android:layout_marginEnd="8dp" />
+
+        <!-- Botón de dislike -->
+        <ImageView
+            android:id="@+id/dislikeButton"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:src="@drawable/ic_thumb_down"
+            android:contentDescription="No me gusta"
+            app:tint="@color/medium_gray"
+            android:padding="2dp"
+            android:layout_marginEnd="16dp" />
+
+        <!-- Botón de comentarios (oculto) -->
+        <ImageView
+            android:id="@+id/commentButton"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_comment"
+            android:contentDescription="Comentarios"
+            app:tint="@color/black"
+            android:layout_marginEnd="16dp"
+            android:visibility="gone" />
+
+        <View
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:layout_weight="1" />
+
+        <!-- Botón de estrella (guardar/favorito) -->
+        <ImageView
+            android:id="@+id/starButton"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_star"
+            android:contentDescription="Favorito"
+            app:tint="@color/vibrant_orange" />
+    </LinearLayout>
+
+    <!-- Información de la receta -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingBottom="16dp">
+
+        <!-- Título de la receta -->
+        <TextView
+            android:id="@+id/recipeTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Título de la receta"
+            android:textColor="@color/black"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:fontFamily="@font/natasans"
+            android:layout_marginBottom="4dp" />
+
+        <!-- Descripción de la receta -->
+        <TextView
+            android:id="@+id/recipeDescription"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Descripción de la receta"
+            android:textColor="@color/black"
+            android:textSize="14sp"
+            android:fontFamily="@font/natasans"
+            android:maxLines="2"
+            android:ellipsize="end"
+            android:layout_marginBottom="8dp" />
+
+        <!-- Información adicional (tiempo, porciones, etiquetas) -->
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Tiempo de cocción -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginEnd="16dp">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_time"
+                    android:contentDescription="Tiempo"
+                    app:tint="@color/medium_gray" />
+
+                <TextView
+                    android:id="@+id/cookingTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="30 min"
+                    android:textColor="@color/medium_gray"
+                    android:textSize="12sp"
+                    android:fontFamily="@font/natasans"
+                    android:layout_marginStart="4dp" />
+            </LinearLayout>
+
+            <!-- Porciones -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:layout_marginEnd="16dp">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_servings"
+                    android:contentDescription="Porciones"
+                    app:tint="@color/medium_gray" />
+
+                <TextView
+                    android:id="@+id/servings"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="4 porciones"
+                    android:textColor="@color/medium_gray"
+                    android:textSize="12sp"
+                    android:fontFamily="@font/natasans"
+                    android:layout_marginStart="4dp" />
+            </LinearLayout>
+
+            <!-- Valoración -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <ImageView
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:src="@drawable/ic_star"
+                    android:contentDescription="Valoración"
+                    app:tint="@color/vibrant_orange" />
+
+                <TextView
+                    android:id="@+id/rating"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="4.5"
+                    android:textColor="@color/medium_gray"
+                    android:textSize="12sp"
+                    android:fontFamily="@font/natasans"
+                    android:layout_marginStart="4dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Etiquetas -->
+        <TextView
+            android:id="@+id/recipeTags"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="#desayuno #fácil"
+            android:textColor="@color/primary_blue"
+            android:textSize="12sp"
+            android:fontFamily="@font/natasans"
+            android:layout_marginTop="8dp" />
+    </LinearLayout>
+</LinearLayout>
+

@@ -490,6 +490,102 @@ class RecipeModel {
     }
     
     /**
+     * Buscar recetas por título, descripción o nombre del usuario creador
+     * Retorna recetas cuyo título, descripción o nombre del autor contiene el texto de búsqueda
+     */
+    public function searchRecipesByTitle($searchQuery, $limit = 50) {
+        error_log("=== RecipeModel::searchRecipesByTitle START ===");
+        error_log("Búsqueda: '$searchQuery', Límite: $limit");
+        
+        // Escapar caracteres especiales de SQL
+        $searchPattern = '%' . $searchQuery . '%';
+        
+        $sql = "
+            SELECT 
+                r.id,
+                r.title,
+                COALESCE(r.description, '') as description,
+                COALESCE(r.ingredients, '') as ingredients,
+                COALESCE(r.steps, '') as steps,
+                r.author_id,
+                COALESCE(CONCAT(u.name, ' ', u.last_name), r.author_name) AS author_name,
+                COALESCE(r.cooking_time, 0) as cooking_time,
+                COALESCE(r.servings, 1) as servings,
+                COALESCE(r.rating, 0.0) as rating,
+                COALESCE(r.is_published, 0) as is_published,
+                r.created_at,
+                r.updated_at
+            FROM recipes r
+            LEFT JOIN users u ON r.author_id = u.id
+            WHERE r.is_published = 1
+            AND (
+                r.title LIKE :search_query
+                OR r.description LIKE :search_query
+                OR COALESCE(CONCAT(u.name, ' ', u.last_name), r.author_name) LIKE :search_query
+            )
+            ORDER BY r.created_at DESC
+            LIMIT :limit
+        ";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':search_query', $searchPattern, PDO::PARAM_STR);
+            $stmt->bindValue(':limit', (int)$limit, PDO::PARAM_INT);
+            $stmt->execute();
+            
+            $recipes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            error_log("✓ Recetas encontradas: " . count($recipes));
+            
+            // Para cada receta, obtener su primera imagen y conteos de votos
+            foreach ($recipes as &$recipe) {
+                try {
+                    // Obtener todas las imágenes
+                    $allImages = $this->getRecipeImages($recipe['id']);
+                    
+                    if (!empty($allImages)) {
+                        $imagesArray = [];
+                        foreach ($allImages as $image) {
+                            if (isset($image['image_data']) && is_string($image['image_data']) && strlen($image['image_data']) > 0) {
+                                $encoded = base64_encode($image['image_data']);
+                                $encoded = str_replace(array("\r", "\n", " "), "", $encoded);
+                                $imagesArray[] = $encoded;
+                            }
+                        }
+                        $recipe['images'] = $imagesArray;
+                        $recipe['image_data'] = !empty($imagesArray) ? $imagesArray[0] : null;
+                    } else {
+                        $recipe['images'] = [];
+                        $recipe['image_data'] = null;
+                    }
+                    
+                    // Obtener conteos de votos
+                    $votesCount = $this->getRecipeVotesCount($recipe['id']);
+                    $recipe['likes'] = $votesCount['likes'];
+                    $recipe['dislikes'] = $votesCount['dislikes'];
+                } catch (Exception $e) {
+                    error_log("ERROR procesando receta {$recipe['id']}: " . $e->getMessage());
+                    $recipe['images'] = [];
+                    $recipe['image_data'] = null;
+                    $recipe['likes'] = 0;
+                    $recipe['dislikes'] = 0;
+                }
+            }
+            
+            error_log("=== RecipeModel::searchRecipesByTitle END - Total: " . count($recipes) . " ===");
+            return $recipes;
+            
+        } catch(PDOException $e) {
+            error_log("ERROR PDO en searchRecipesByTitle: " . $e->getMessage());
+            error_log("SQL State: " . $e->getCode());
+            throw new Exception("Error buscando recetas: " . $e->getMessage());
+        } catch(Exception $e) {
+            error_log("ERROR GENERAL en searchRecipesByTitle: " . $e->getMessage());
+            throw $e;
+        }
+    }
+    
+    /**
      * Obtener solo la primera imagen de una receta
      */
     public function getFirstRecipeImage($recipeId) {

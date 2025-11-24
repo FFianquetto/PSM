@@ -2,6 +2,7 @@ package com.example.ejemplo2
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Button
 import android.widget.EditText
 import android.widget.ImageButton
@@ -95,9 +96,11 @@ class LoginActivity : AppCompatActivity() {
                         val intent = Intent(this@LoginActivity, MainActivity::class.java)
                         intent.putExtra("user_id", userData.id)
                         intent.putExtra("user_name", userData.name)
-                        intent.putExtra("user_email", userData.email)
+                        intent.putExtra("user_email", userData.email) // SIEMPRE pasar el email
                         intent.putExtra("user_alias", userData.alias)
                         intent.putExtra("user_avatar", userData.avatarPath)
+                        intent.putExtra("first_login", true) // Marcar que es el primer login
+                        Log.d("LoginActivity", "Navegando a MainActivity con email: '${userData.email}'")
                         startActivity(intent)
                         finish()
                     }

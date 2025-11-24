@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/rounded_background"
+    android:backgroundTint="@color/light_gray"
+    android:padding="16dp"
+    android:layout_marginBottom="12dp"
+    android:elevation="1dp">
+
+    <!-- Nombre del usuario -->
+    <TextView
+        android:id="@+id/commentUserName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Nombre Usuario"
+        android:textColor="@color/primary_blue"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:fontFamily="@font/natasans"
+        android:layout_marginBottom="8dp"/>
+
+    <!-- Texto del comentario -->
+    <TextView
+        android:id="@+id/commentText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Texto del comentario"
+        android:textColor="@color/black"
+        android:textSize="15sp"
+        android:fontFamily="@font/natasans"
+        android:lineSpacingExtra="4dp"
+        android:layout_marginBottom="8dp"/>
+
+    <!-- Fila con fecha y botones de like/dislike -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:layout_marginBottom="8dp">
+
+        <!-- Fecha del comentario -->
+        <TextView
+            android:id="@+id/commentDate"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Fecha"
+            android:textColor="@color/medium_gray"
+            android:textSize="12sp"
+            android:fontFamily="@font/natasans"
+            android:drawableStart="@drawable/ic_time"
+            android:drawablePadding="4dp"
+            android:gravity="center_vertical"/>
+
+        <!-- Botones de like/dislike -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Botón Like -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="4dp">
+
+                <ImageView
+                    android:id="@+id/commentLikeButton"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_thumb_up"
+                    android:contentDescription="Like"
+                    android:tint="@color/medium_gray"/>
+
+                <TextView
+                    android:id="@+id/commentLikesCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textSize="12sp"
+                    android:textColor="@color/medium_gray"
+                    android:layout_marginStart="4dp"
+                    android:fontFamily="@font/natasans"/>
+            </LinearLayout>
+
+            <!-- Botón Dislike -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:padding="4dp"
+                android:layout_marginStart="8dp">
+
+                <ImageView
+                    android:id="@+id/commentDislikeButton"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:src="@drawable/ic_thumb_down"
+                    android:contentDescription="Dislike"
+                    android:tint="@color/medium_gray"/>
+
+                <TextView
+                    android:id="@+id/commentDislikesCount"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textSize="12sp"
+                    android:textColor="@color/medium_gray"
+                    android:layout_marginStart="4dp"
+                    android:fontFamily="@font/natasans"/>
+            </LinearLayout>
+
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Botón Responder -->
+    <TextView
+        android:id="@+id/commentReplyButton"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Responder"
+        android:textColor="@color/primary_blue"
+        android:textSize="13sp"
+        android:textStyle="bold"
+        android:fontFamily="@font/natasans"
+        android:padding="4dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?attr/selectableItemBackground"
+        android:layout_marginBottom="8dp"/>
+
+    <!-- Contenedor para respuestas -->
+    <LinearLayout
+        android:id="@+id/repliesContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone"/>
+
+    <!-- Formulario para responder (inicialmente oculto) -->
+    <LinearLayout
+        android:id="@+id/replyFormContainer"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone"
+        android:layout_marginTop="8dp">
+
+        <EditText
+            android:id="@+id/replyEditText"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Escribe tu respuesta..."
+            android:minHeight="40dp"
+            android:maxLines="3"
+            android:background="@drawable/rounded_background"
+            android:backgroundTint="@color/white"
+            android:padding="8dp"
+            android:textSize="14sp"
+            android:fontFamily="@font/natasans"
+            android:layout_marginBottom="8dp"/>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end">
+
+            <Button
+                android:id="@+id/cancelReplyButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Cancelar"
+                android:textColor="@color/medium_gray"
+                android:backgroundTint="@android:color/transparent"
+                android:layout_marginEnd="8dp"
+                style="@style/Widget.MaterialComponents.Button.TextButton"/>
+
+            <Button
+                android:id="@+id/submitReplyButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Responder"
+                android:textColor="@color/white"
+                android:backgroundTint="@color/primary_blue"
+                style="@style/Widget.MaterialComponents.Button"/>
+
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout>
+

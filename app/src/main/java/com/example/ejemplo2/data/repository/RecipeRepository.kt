@@ -21,6 +21,7 @@ class RecipeRepository(context: Context) {
      */
     suspend fun createRecipe(
         title: String,
+        description: String = "",
         ingredients: String,
         steps: String,
         authorId: Long,
@@ -35,6 +36,10 @@ class RecipeRepository(context: Context) {
         // Validar campos obligatorios
         if (title.isBlank()) {
             return@withContext ValidationResult(false, "El título es obligatorio")
+        }
+        
+        if (description.isBlank()) {
+            return@withContext ValidationResult(false, "La descripción es obligatoria")
         }
         
         if (ingredients.isBlank()) {
@@ -56,6 +61,7 @@ class RecipeRepository(context: Context) {
         try {
             val recipe = Recipe(
                 title = title.trim(),
+                description = description.trim(),
                 ingredients = ingredients.trim(),
                 steps = steps.trim(),
                 authorId = authorId,
@@ -63,7 +69,7 @@ class RecipeRepository(context: Context) {
                 tags = tags?.trim(),
                 cookingTime = cookingTime,
                 servings = servings,
-                imagePath = imagePath,
+                imagePath = null, // Ya no usamos imagePath, las imágenes van en recipe_images
                 isPublished = isPublished
             )
             
@@ -107,7 +113,7 @@ class RecipeRepository(context: Context) {
     fun getDraftsByAuthor(authorId: Long): Flow<List<Recipe>> = recipeDao.getDraftsByAuthor(authorId)
     
     /**
-     * Buscar recetas
+     * Buscar recetas por título, descripción o nombre del usuario creador
      */
     fun searchRecipes(query: String): Flow<List<Recipe>> = recipeDao.searchRecipes("%$query%")
     
@@ -180,6 +186,7 @@ class RecipeRepository(context: Context) {
      */
     suspend fun createRecipeWithImages(
         title: String,
+        description: String = "",
         ingredients: String,
         steps: String,
         authorId: Long,
@@ -194,6 +201,10 @@ class RecipeRepository(context: Context) {
         // Validar campos obligatorios
         if (title.isBlank()) {
             return@withContext RecipeCreationResult(false, "El título es obligatorio")
+        }
+        
+        if (description.isBlank()) {
+            return@withContext RecipeCreationResult(false, "La descripción es obligatoria")
         }
         
         if (ingredients.isBlank()) {
@@ -216,6 +227,7 @@ class RecipeRepository(context: Context) {
             // Crear la receta
             val recipe = Recipe(
                 title = title.trim(),
+                description = description.trim(),
                 ingredients = ingredients.trim(),
                 steps = steps.trim(),
                 authorId = authorId,

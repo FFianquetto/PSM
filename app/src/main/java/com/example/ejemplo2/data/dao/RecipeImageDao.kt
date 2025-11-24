@@ -33,6 +33,9 @@ interface RecipeImageDao {
     
     @Query("SELECT COUNT(*) FROM recipe_images WHERE recipeId = :recipeId")
     suspend fun getImageCountByRecipeId(recipeId: Long): Int
+    
+    @Query("DELETE FROM recipe_images")
+    suspend fun deleteAllImages()
 }
 
 
