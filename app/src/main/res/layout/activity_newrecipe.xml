@@ -38,6 +38,7 @@
                     app:tint="@color/primary_blue" />
 
                 <TextView
+                    android:id="@+id/screenTitle"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"

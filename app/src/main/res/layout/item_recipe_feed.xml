@@ -16,12 +16,17 @@
         android:padding="16dp"
         android:gravity="center_vertical">
 
-        <!-- Avatar del autor (por ahora un círculo simple) -->
-        <View
+        <!-- Avatar del autor -->
+        <com.google.android.material.imageview.ShapeableImageView
+            android:id="@+id/authorAvatar"
             android:layout_width="40dp"
             android:layout_height="40dp"
-            android:background="@drawable/circle_background"
-            android:backgroundTint="@color/primary_blue" />
+            android:src="@drawable/ic_profile"
+            android:scaleType="centerCrop"
+            android:contentDescription="@string/author_avatar_content_description"
+            app:shapeAppearanceOverlay="@style/Widget.Ejemplo2.CircleImage"
+            app:strokeColor="@color/light_gray"
+            app:strokeWidth="1dp" />
 
         <!-- Información del autor -->
         <LinearLayout
@@ -226,30 +231,15 @@
                     android:layout_marginStart="4dp" />
             </LinearLayout>
 
-            <!-- Valoración -->
-            <LinearLayout
+            <!-- Valoración (solo texto) -->
+            <TextView
+                android:id="@+id/rating"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
-                android:gravity="center_vertical">
-
-                <ImageView
-                    android:layout_width="16dp"
-                    android:layout_height="16dp"
-                    android:src="@drawable/ic_star"
-                    android:contentDescription="Valoración"
-                    app:tint="@color/vibrant_orange" />
-
-                <TextView
-                    android:id="@+id/rating"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="4.5"
-                    android:textColor="@color/medium_gray"
-                    android:textSize="12sp"
-                    android:fontFamily="@font/natasans"
-                    android:layout_marginStart="4dp" />
-            </LinearLayout>
+                android:text="4.5"
+                android:textColor="@color/medium_gray"
+                android:textSize="12sp"
+                android:fontFamily="@font/natasans" />
         </LinearLayout>
 
         <!-- Etiquetas -->

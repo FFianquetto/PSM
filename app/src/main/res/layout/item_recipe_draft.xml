@@ -56,21 +56,42 @@
             android:paddingVertical="4dp" />
     </LinearLayout>
 
-    <Button
-        android:id="@+id/publishButton"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="Publicar"
-        android:textAllCaps="false"
-        android:textSize="14sp"
-        android:fontFamily="@font/natasans"
-        android:textStyle="bold"
-        android:backgroundTint="@color/vibrant_orange"
-        android:textColor="@android:color/white"
-        android:layout_marginTop="12dp"
-        android:layout_gravity="end"
-        android:paddingHorizontal="24dp"
-        android:paddingVertical="8dp" />
+        android:orientation="horizontal"
+        android:gravity="end"
+        android:layout_marginTop="12dp">
+
+        <Button
+            android:id="@+id/editButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Editar"
+            android:textAllCaps="false"
+            android:textSize="14sp"
+            android:fontFamily="@font/natasans"
+            android:textStyle="bold"
+            android:backgroundTint="@color/purple_accent"
+            android:textColor="@android:color/white"
+            android:layout_marginEnd="8dp"
+            android:paddingHorizontal="20dp"
+            android:paddingVertical="8dp" />
+
+        <Button
+            android:id="@+id/publishButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Publicar"
+            android:textAllCaps="false"
+            android:textSize="14sp"
+            android:fontFamily="@font/natasans"
+            android:textStyle="bold"
+            android:backgroundTint="@color/vibrant_orange"
+            android:textColor="@android:color/white"
+            android:paddingHorizontal="24dp"
+            android:paddingVertical="8dp" />
+    </LinearLayout>
 
 </LinearLayout>
 

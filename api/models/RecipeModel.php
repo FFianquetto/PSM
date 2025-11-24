@@ -222,6 +222,8 @@ class RecipeModel {
                 COALESCE(r.steps, '') as steps,
                 r.author_id,
                 COALESCE(CONCAT(u.name, ' ', u.last_name), r.author_name) AS author_name,
+                COALESCE(u.alias, r.author_name) AS author_alias,
+                COALESCE(u.avatar_path, '') AS author_avatar,
                 COALESCE(r.cooking_time, 0) as cooking_time,
                 COALESCE(r.servings, 1) as servings,
                 COALESCE(r.rating, 0.0) as rating,
@@ -420,6 +422,8 @@ class RecipeModel {
                 r.description,
                 r.author_id,
                 COALESCE(CONCAT(u.name, ' ', u.last_name), r.author_name) AS author_name,
+                COALESCE(u.alias, r.author_name) AS author_alias,
+                COALESCE(u.avatar_path, '') AS author_avatar,
                 r.tags,
                 r.cooking_time,
                 r.servings,
@@ -485,6 +489,87 @@ class RecipeModel {
             throw new Exception("Error obteniendo recetas: " . $e->getMessage());
         } catch(Exception $e) {
             error_log("ERROR GENERAL en getLatestRecipes: " . $e->getMessage());
+            throw $e;
+        }
+    }
+    
+    /**
+     * Obtener recetas publicadas por un usuario específico
+     */
+    public function getPublishedRecipesByUserId($userId) {
+        ini_set('memory_limit', '256M');
+        
+        error_log("=== RecipeModel::getPublishedRecipesByUserId START (userId=$userId) ===");
+        
+        $sql = "
+            SELECT 
+                r.id,
+                r.title,
+                COALESCE(r.description, '') as description,
+                COALESCE(r.ingredients, '') as ingredients,
+                COALESCE(r.steps, '') as steps,
+                r.author_id,
+                COALESCE(CONCAT(u.name, ' ', u.last_name), r.author_name) AS author_name,
+                COALESCE(u.alias, r.author_name) AS author_alias,
+                COALESCE(u.avatar_path, '') AS author_avatar,
+                COALESCE(r.tags, '') as tags,
+                COALESCE(r.cooking_time, 0) as cooking_time,
+                COALESCE(r.servings, 1) as servings,
+                COALESCE(r.rating, 0.0) as rating,
+                COALESCE(r.is_published, 0) as is_published,
+                r.created_at,
+                r.updated_at
+            FROM recipes r
+            LEFT JOIN users u ON r.author_id = u.id
+            WHERE r.author_id = :author_id
+              AND r.is_published = 1
+            ORDER BY r.updated_at DESC, r.created_at DESC
+        ";
+        
+        try {
+            $stmt = $this->db->prepare($sql);
+            $stmt->bindValue(':author_id', (int)$userId, PDO::PARAM_INT);
+            $stmt->execute();
+            
+            $recipes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            error_log("Recetas publicadas encontradas: " . count($recipes));
+            
+            foreach ($recipes as &$recipe) {
+                $recipe['is_published'] = (bool)$recipe['is_published'];
+                
+                try {
+                    $allImages = $this->getRecipeImages($recipe['id']);
+                    
+                    if (!empty($allImages)) {
+                        $imagesArray = [];
+                        foreach ($allImages as $image) {
+                            if (isset($image['image_data']) && is_string($image['image_data']) && strlen($image['image_data']) > 0) {
+                                $encoded = base64_encode($image['image_data']);
+                                $encoded = str_replace(array("\r", "\n", " "), "", $encoded);
+                                $imagesArray[] = $encoded;
+                            }
+                        }
+                        $recipe['images'] = $imagesArray;
+                        $recipe['image_data'] = !empty($imagesArray) ? $imagesArray[0] : null;
+                    } else {
+                        $recipe['images'] = [];
+                        $recipe['image_data'] = null;
+                    }
+                } catch (Exception $e) {
+                    error_log("ERROR procesando imágenes para receta {$recipe['id']}: " . $e->getMessage());
+                    $recipe['images'] = [];
+                    $recipe['image_data'] = null;
+                }
+            }
+            unset($recipe);
+            
+            error_log("=== RecipeModel::getPublishedRecipesByUserId END ===");
+            return $recipes;
+        } catch(PDOException $e) {
+            error_log("ERROR PDO en getPublishedRecipesByUserId: " . $e->getMessage());
+            throw new Exception("Error obteniendo recetas del usuario: " . $e->getMessage());
+        } catch(Exception $e) {
+            error_log("ERROR GENERAL en getPublishedRecipesByUserId: " . $e->getMessage());
             throw $e;
         }
     }
@@ -811,6 +896,8 @@ class RecipeModel {
                 r.description,
                 r.author_id,
                 COALESCE(CONCAT(u.name, ' ', u.last_name), r.author_name) AS author_name,
+                COALESCE(u.alias, r.author_name) AS author_alias,
+                COALESCE(u.avatar_path, '') AS author_avatar,
                 r.tags,
                 r.cooking_time,
                 r.servings,

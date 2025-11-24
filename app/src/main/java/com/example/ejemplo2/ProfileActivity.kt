@@ -22,11 +22,14 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.example.ejemplo2.adapter.DraftRecipesAdapter
 import com.example.ejemplo2.adapter.UserRecipesAdapter
+import com.example.ejemplo2.data.api.ApiService
 import com.example.ejemplo2.data.entity.Recipe
 import com.example.ejemplo2.data.hybrid.HybridUserRepository
 import com.example.ejemplo2.data.repository.RecipeRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -37,11 +40,15 @@ import com.example.ejemplo2.data.entity.Favorite
 class ProfileActivity : AppCompatActivity() {
     
     private lateinit var hybridRepository: HybridUserRepository
+    private lateinit var apiService: ApiService
     private lateinit var recipeRepository: RecipeRepository
-    private lateinit var userRecipesAdapter: UserRecipesAdapter
+    private lateinit var publishedRecipesAdapter: UserRecipesAdapter
+    private lateinit var draftRecipesAdapter: DraftRecipesAdapter
     private lateinit var likedRecipesAdapter: UserRecipesAdapter
     private var currentUserId: Long = -1
     private var currentUserEmail: String = ""
+    private var currentUserMySQLId: Long = -1
+    private var currentUserName: String = ""
     private var allFavorites: List<Favorite> = emptyList() // Lista completa de favoritos para restaurar después de búsqueda
     
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,10 +57,12 @@ class ProfileActivity : AppCompatActivity() {
 
         // Inicializar repositorios
         hybridRepository = HybridUserRepository(this)
+        apiService = ApiService(this)
         recipeRepository = RecipeRepository(this)
         
-        // Configurar RecyclerView para recetas del usuario
-        setupUserRecipesRecyclerView()
+        // Configurar RecyclerViews para recetas del usuario
+        setupPublishedRecipesRecyclerView()
+        setupDraftRecipesRecyclerView()
         
         // Configurar RecyclerView para recetas con like
         setupLikedRecipesRecyclerView()
@@ -71,6 +80,9 @@ class ProfileActivity : AppCompatActivity() {
         } else {
             // Intentar restaurar desde savedInstanceState si existe
             savedInstanceState?.getString("saved_user_email") ?: ""
+        }
+        if (currentUserName.isEmpty()) {
+            currentUserName = savedInstanceState?.getString("saved_user_name", "") ?: ""
         }
         
         // Restaurar userId desde savedInstanceState si no viene en el intent
@@ -263,6 +275,10 @@ class ProfileActivity : AppCompatActivity() {
 
         // Guardar email del usuario actual
         currentUserEmail = user.email
+        currentUserName = listOfNotNull(
+            user.name.takeIf { it.isNotBlank() },
+            user.lastName.takeIf { it.isNotBlank() }
+        ).joinToString(" ").ifBlank { user.name }
         Log.d("ProfileActivity", "updateUI: Email guardado desde usuario: '$currentUserEmail'")
 
         // Actualizar información básica
@@ -302,8 +318,11 @@ class ProfileActivity : AppCompatActivity() {
         // Mostrar mensaje de bienvenida personalizado
         Toast.makeText(this, "¡Bienvenido de nuevo, ${user.name}!", Toast.LENGTH_SHORT).show()
         
-        // Cargar recetas del usuario
-        loadUserRecipes()
+        // Cargar recetas publicadas desde MySQL
+        loadPublishedRecipes()
+        
+        // Cargar borradores locales
+        loadDraftRecipes()
         
         // Cargar publicaciones guardadas (favoritos) desde SQLite
         if (currentUserId != -1L) {
@@ -314,17 +333,34 @@ class ProfileActivity : AppCompatActivity() {
         }
     }
     
-    private fun setupUserRecipesRecyclerView() {
-        val recyclerView = findViewById<RecyclerView>(R.id.userRecipesRecyclerView)
+    private fun setupPublishedRecipesRecyclerView() {
+        val recyclerView = findViewById<RecyclerView>(R.id.publishedRecipesRecyclerView)
         recyclerView.layoutManager = LinearLayoutManager(this)
         
-        userRecipesAdapter = UserRecipesAdapter(
+        publishedRecipesAdapter = UserRecipesAdapter(
             onRecipeClick = { recipe ->
                 navigateToRecipeDetail(recipe)
             }
         )
         
-        recyclerView.adapter = userRecipesAdapter
+        recyclerView.adapter = publishedRecipesAdapter
+    }
+    
+    private fun setupDraftRecipesRecyclerView() {
+        val recyclerView = findViewById<RecyclerView>(R.id.draftRecipesRecyclerView)
+        recyclerView.layoutManager = LinearLayoutManager(this)
+        
+        draftRecipesAdapter = DraftRecipesAdapter(
+            onRecipeClick = { /* Reservado para edición futura */ },
+            onPublishClick = { recipe ->
+                publishDraft(recipe)
+            },
+            onEditClick = { recipe ->
+                navigateToEditRecipe(recipe)
+            }
+        )
+        
+        recyclerView.adapter = draftRecipesAdapter
     }
     
     private fun setupLikedRecipesRecyclerView() {
@@ -379,51 +415,253 @@ class ProfileActivity : AppCompatActivity() {
         })
     }
     
-    private fun loadUserRecipes() {
-        if (currentUserId == -1L) {
-            Log.e("ProfileActivity", "loadUserRecipes: Usuario no logueado - currentUserId=$currentUserId")
+    private fun loadPublishedRecipes() {
+        if (currentUserEmail.isBlank()) {
+            Log.e("ProfileActivity", "loadPublishedRecipes: Email de usuario no disponible")
+            val emptyText = findViewById<TextView>(R.id.noPublishedRecipesText)
+            val recyclerView = findViewById<RecyclerView>(R.id.publishedRecipesRecyclerView)
+            emptyText.visibility = View.VISIBLE
+            recyclerView.visibility = View.GONE
             return
         }
         
-        Log.d("ProfileActivity", "=== CARGANDO MIS RECETAS DESDE SQLite ===")
-        Log.d("ProfileActivity", "User ID (SQLite): $currentUserId")
+        lifecycleScope.launch {
+            showLoadingIndicator(true)
+            try {
+                val mysqlUserId = getOrFetchMySQLUserId()
+                if (mysqlUserId == null || mysqlUserId == -1L) {
+                    Log.e("ProfileActivity", "loadPublishedRecipes: No se pudo obtener ID de MySQL")
+                    withContext(Dispatchers.Main) {
+                        val emptyText = findViewById<TextView>(R.id.noPublishedRecipesText)
+                        val recyclerView = findViewById<RecyclerView>(R.id.publishedRecipesRecyclerView)
+                        emptyText.visibility = View.VISIBLE
+                        recyclerView.visibility = View.GONE
+                        emptyText.text = "No fue posible consultar tus recetas publicadas"
+                    }
+                    return@launch
+                }
+                
+                val result = apiService.getUserPublishedRecipes(mysqlUserId)
+                if (result.isSuccess) {
+                    val publishedRemote = result.getOrNull().orEmpty()
+                    Log.d("ProfileActivity", "✓ Recetas publicadas obtenidas desde MySQL: ${publishedRemote.size}")
+                    
+                    val publishedRecipes = publishedRemote.map { remote ->
+                        Recipe(
+                            id = remote.id,
+                            title = remote.title,
+                            description = remote.description ?: "",
+                            ingredients = remote.ingredients ?: "",
+                            steps = remote.steps ?: "",
+                            authorId = remote.authorId,
+                            authorName = remote.authorName,
+                            tags = remote.tags?.takeIf { it.isNotBlank() },
+                            cookingTime = remote.cookingTime,
+                            servings = remote.servings,
+                            rating = remote.rating,
+                            isPublished = true,
+                            createdAt = remote.createdAt,
+                            updatedAt = remote.updatedAt ?: remote.createdAt
+                        )
+                    }
+                    
+                    withContext(Dispatchers.Main) {
+                        val emptyText = findViewById<TextView>(R.id.noPublishedRecipesText)
+                        val recyclerView = findViewById<RecyclerView>(R.id.publishedRecipesRecyclerView)
+                        
+                        if (publishedRecipes.isEmpty()) {
+                            emptyText.visibility = View.VISIBLE
+                            recyclerView.visibility = View.GONE
+                        } else {
+                            emptyText.visibility = View.GONE
+                            recyclerView.visibility = View.VISIBLE
+                            publishedRecipesAdapter.updateRecipes(publishedRecipes)
+                        }
+                    }
+                } else {
+                    val error = result.exceptionOrNull()
+                    Log.e("ProfileActivity", "✗ Error obteniendo recetas publicadas: ${error?.message}", error)
+                    withContext(Dispatchers.Main) {
+                        val emptyText = findViewById<TextView>(R.id.noPublishedRecipesText)
+                        val recyclerView = findViewById<RecyclerView>(R.id.publishedRecipesRecyclerView)
+                        emptyText.visibility = View.VISIBLE
+                        recyclerView.visibility = View.GONE
+                        emptyText.text = "No se pudieron cargar tus recetas publicadas"
+                        Toast.makeText(this@ProfileActivity, "Error cargando publicaciones: ${error?.message}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("ProfileActivity", "✗ EXCEPCIÓN cargando recetas publicadas: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    val emptyText = findViewById<TextView>(R.id.noPublishedRecipesText)
+                    val recyclerView = findViewById<RecyclerView>(R.id.publishedRecipesRecyclerView)
+                    emptyText.visibility = View.VISIBLE
+                    recyclerView.visibility = View.GONE
+                    emptyText.text = "Error al cargar tus recetas publicadas"
+                    Toast.makeText(this@ProfileActivity, "Error cargando recetas: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            } finally {
+                showLoadingIndicator(false)
+            }
+        }
+    }
+    
+    private fun loadDraftRecipes() {
+        if (currentUserId == -1L) {
+            Log.e("ProfileActivity", "loadDraftRecipes: Usuario no logueado - currentUserId=$currentUserId")
+            return
+        }
         
         lifecycleScope.launch {
             try {
                 val db = AppDatabase.getDatabase(this@ProfileActivity)
                 val recipeDao = db.recipeDao()
                 
-                // Obtener recetas del usuario desde SQLite donde el usuario es el autor
-                val recipesFlow = recipeDao.getRecipesByAuthor(currentUserId)
-                
-                recipesFlow.collect { recipeList ->
-                    Log.d("ProfileActivity", "✓ Recetas del usuario obtenidas desde SQLite: ${recipeList.size}")
-                    
-                    val noRecipesText = findViewById<TextView>(R.id.noRecipesText)
+                recipeDao.getDraftsByAuthor(currentUserId).collect { draftList ->
+                    Log.d("ProfileActivity", "✓ Borradores obtenidos desde SQLite: ${draftList.size}")
                     
                     withContext(Dispatchers.Main) {
-                        if (recipeList.isEmpty()) {
-                            Log.d("ProfileActivity", "No hay recetas del usuario - mostrando mensaje")
-                            noRecipesText.visibility = TextView.VISIBLE
-                            findViewById<RecyclerView>(R.id.userRecipesRecyclerView).visibility = RecyclerView.GONE
+                        val emptyText = findViewById<TextView>(R.id.noDraftRecipesText)
+                        val recyclerView = findViewById<RecyclerView>(R.id.draftRecipesRecyclerView)
+                        
+                        if (draftList.isEmpty()) {
+                            emptyText.visibility = View.VISIBLE
+                            recyclerView.visibility = View.GONE
                         } else {
-                            Log.d("ProfileActivity", "✓ Mostrando ${recipeList.size} recetas del usuario")
-                            noRecipesText.visibility = TextView.GONE
-                            findViewById<RecyclerView>(R.id.userRecipesRecyclerView).visibility = RecyclerView.VISIBLE
-                            userRecipesAdapter.updateRecipes(recipeList)
+                            emptyText.visibility = View.GONE
+                            recyclerView.visibility = View.VISIBLE
+                            draftRecipesAdapter.updateRecipes(draftList)
                         }
                     }
                 }
             } catch (e: Exception) {
-                Log.e("ProfileActivity", "✗ EXCEPCIÓN cargando recetas del usuario: ${e.message}", e)
-                Log.e("ProfileActivity", "Stack trace: ${e.stackTrace.joinToString("\n")}")
+                Log.e("ProfileActivity", "✗ EXCEPCIÓN cargando borradores: ${e.message}", e)
                 withContext(Dispatchers.Main) {
-                    val noRecipesText = findViewById<TextView>(R.id.noRecipesText)
-                    noRecipesText.visibility = TextView.VISIBLE
-                    findViewById<RecyclerView>(R.id.userRecipesRecyclerView).visibility = RecyclerView.GONE
-                    Toast.makeText(this@ProfileActivity, "Error cargando recetas: ${e.message}", Toast.LENGTH_SHORT).show()
+                    val emptyText = findViewById<TextView>(R.id.noDraftRecipesText)
+                    val recyclerView = findViewById<RecyclerView>(R.id.draftRecipesRecyclerView)
+                    emptyText.visibility = View.VISIBLE
+                    recyclerView.visibility = View.GONE
+                    Toast.makeText(this@ProfileActivity, "Error cargando borradores: ${e.message}", Toast.LENGTH_SHORT).show()
                 }
             }
+        }
+    }
+    
+    private fun publishDraft(recipe: Recipe) {
+        if (currentUserId == -1L) {
+            Toast.makeText(this, "Debes iniciar sesión para publicar", Toast.LENGTH_SHORT).show()
+            return
+        }
+        
+        lifecycleScope.launch {
+            showLoadingIndicator(true)
+            try {
+                val mysqlUserId = getOrFetchMySQLUserId()
+                if (mysqlUserId == null || mysqlUserId == -1L) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@ProfileActivity, "No se pudo obtener tu cuenta en el servidor", Toast.LENGTH_LONG).show()
+                    }
+                    return@launch
+                }
+                
+                val db = AppDatabase.getDatabase(this@ProfileActivity)
+                val recipeImageDao = db.recipeImageDao()
+                
+                val images = withContext(Dispatchers.IO) {
+                    recipeImageDao.getImagesByRecipeId(recipe.id).first()
+                }
+                
+                val imagePairs = images.mapNotNull { image ->
+                    val bitmap = try {
+                        BitmapFactory.decodeByteArray(image.imageData, 0, image.imageData.size)
+                    } catch (e: Exception) {
+                        Log.e("ProfileActivity", "Error decodificando imagen ${image.id}: ${e.message}", e)
+                        null
+                    }
+                    bitmap?.let { bmp ->
+                        Pair(bmp, image.description ?: "")
+                    }
+                }
+                
+                val publishTimestamp = System.currentTimeMillis()
+                
+                val publishResult = apiService.createRecipeWithImages(
+                    title = recipe.title,
+                    description = recipe.description,
+                    ingredients = recipe.ingredients,
+                    steps = recipe.steps,
+                    authorId = mysqlUserId,
+                    authorName = recipe.authorName,
+                    tags = recipe.tags,
+                    cookingTime = recipe.cookingTime,
+                    servings = recipe.servings,
+                    isPublished = true,
+                    images = imagePairs,
+                    createdAtOverride = recipe.createdAt,
+                    updatedAtOverride = publishTimestamp
+                )
+                
+                if (publishResult.isSuccess) {
+                    val statusResult = recipeRepository.updateRecipeStatus(recipe.id, true)
+                    if (!statusResult.isValid) {
+                        Log.w("ProfileActivity", "Receta publicada pero no se pudo actualizar el estado local: ${statusResult.message}")
+                    } else {
+                        Log.d("ProfileActivity", "✓ Receta ${recipe.id} marcada como publicada en SQLite")
+                    }
+                    
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(this@ProfileActivity, "Receta publicada exitosamente", Toast.LENGTH_SHORT).show()
+                    }
+                    
+                    // Refrescar listas
+                    loadPublishedRecipes()
+                } else {
+                    val error = publishResult.exceptionOrNull()
+                    Log.e("ProfileActivity", "✗ Error publicando borrador: ${error?.message}", error)
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(
+                            this@ProfileActivity,
+                            "No se pudo publicar la receta: ${error?.message ?: "Error desconocido"}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("ProfileActivity", "✗ EXCEPCIÓN publicando borrador: ${e.message}", e)
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@ProfileActivity, "Error publicando receta: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            } finally {
+                showLoadingIndicator(false)
+            }
+        }
+    }
+    
+    private suspend fun getOrFetchMySQLUserId(): Long? {
+        if (currentUserMySQLId != -1L) {
+            return currentUserMySQLId
+        }
+        
+        val resolvedEmail = currentUserEmail.ifBlank {
+            this.intent.getStringExtra("user_email") ?: ""
+        }
+        
+        if (resolvedEmail.isBlank()) {
+            Log.e("ProfileActivity", "getOrFetchMySQLUserId: Email vacío, imposible consultar ID")
+            return null
+        }
+        
+        currentUserEmail = resolvedEmail
+        
+        val result = apiService.getUserByEmail(resolvedEmail)
+        return if (result.isSuccess) {
+            val userData = result.getOrNull()
+            currentUserMySQLId = userData?.id ?: -1
+            currentUserMySQLId
+        } else {
+            val error = result.exceptionOrNull()
+            Log.e("ProfileActivity", "Error obteniendo usuario por email: ${error?.message}", error)
+            null
         }
     }
     
@@ -555,6 +793,7 @@ class ProfileActivity : AppCompatActivity() {
         // Guardar datos del usuario para preservarlos
         outState.putLong("saved_user_id", currentUserId)
         outState.putString("saved_user_email", currentUserEmail)
+        outState.putString("saved_user_name", currentUserName)
         Log.d("ProfileActivity", "Datos guardados en savedInstanceState - Email: '$currentUserEmail'")
     }
     
@@ -568,6 +807,21 @@ class ProfileActivity : AppCompatActivity() {
             this.intent.getStringExtra("user_email") ?: "" 
         }
         intent.putExtra("user_email", emailToPass)
+        if (currentUserName.isNotEmpty()) {
+            intent.putExtra("user_name", currentUserName)
+        }
+        startActivity(intent)
+    }
+    
+    private fun navigateToEditRecipe(recipe: Recipe) {
+        val intent = Intent(this, CreateRecipeActivity::class.java)
+        intent.putExtra("is_edit_mode", true)
+        intent.putExtra("recipe_id", recipe.id)
+        intent.putExtra("user_id", currentUserId)
+        intent.putExtra("user_email", currentUserEmail)
+        if (currentUserName.isNotEmpty()) {
+            intent.putExtra("user_name", currentUserName)
+        }
         startActivity(intent)
     }
     
@@ -590,9 +844,13 @@ class ProfileActivity : AppCompatActivity() {
             intent.putExtra("user_email", emailToPass)
             
             // Si tenemos nombre de usuario, también pasarlo
-            val userName = this.intent.getStringExtra("user_name")
-            if (!userName.isNullOrEmpty()) {
-                intent.putExtra("user_name", userName)
+            if (currentUserName.isNotEmpty()) {
+                intent.putExtra("user_name", currentUserName)
+            } else {
+                val userName = this.intent.getStringExtra("user_name")
+                if (!userName.isNullOrEmpty()) {
+                    intent.putExtra("user_name", userName)
+                }
             }
             
             startActivity(intent)
@@ -606,6 +864,9 @@ class ProfileActivity : AppCompatActivity() {
                 val intent = Intent(this, CreateRecipeActivity::class.java)
                 intent.putExtra("user_id", currentUserId)
                 intent.putExtra("user_email", currentUserEmail)
+                if (currentUserName.isNotEmpty()) {
+                    intent.putExtra("user_name", currentUserName)
+                }
                 startActivity(intent)
             } else {
                 Toast.makeText(this, "Debes iniciar sesión para crear recetas", Toast.LENGTH_SHORT).show()

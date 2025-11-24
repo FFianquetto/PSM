@@ -408,11 +408,13 @@ class ApiService(private val context: Context) {
         cookingTime: Int = 0,
         servings: Int = 1,
         isPublished: Boolean = false,
-        images: List<Pair<android.graphics.Bitmap, String>> = emptyList()
+        images: List<Pair<android.graphics.Bitmap, String>> = emptyList(),
+        createdAtOverride: Long? = null,
+        updatedAtOverride: Long? = null
     ): Result<Long> = withContext(Dispatchers.IO) {
         try {
-            val createdAt = System.currentTimeMillis()
-            val updatedAt = createdAt
+            val createdAt = createdAtOverride ?: System.currentTimeMillis()
+            val updatedAt = updatedAtOverride ?: createdAt
             
             // Convertir imágenes a Base64 (permite múltiples imágenes)
             val imagesArray = JSONArray()
@@ -756,19 +758,25 @@ class ApiService(private val context: Context) {
                                 
                                 Log.d(TAG, "Total imágenes procesadas para receta ${recipeJson.optLong("id")}: ${imagesList.size}")
                                 
+                                val authorName = recipeJson.optString("author_name", recipeJson.optString("authorName", ""))
+                                val authorAlias = recipeJson.optString("author_alias", recipeJson.optString("authorAlias", authorName))
+                                val authorAvatar = recipeJson.optString("author_avatar", recipeJson.optString("authorAvatar", null))
+                                    .takeIf { it.isNotBlank() }
+                                
                                 val recipe = RecipeFeedData(
                                     id = recipeJson.getLong("id"),
                                     title = recipeJson.getString("title"),
                                     description = recipeJson.optString("description", ""),
-                                    authorId = recipeJson.getLong("author_id"),
-                                    authorName = recipeJson.getString("author_name"),
-                                    authorAlias = recipeJson.optString("author_name", ""), // Usar author_name como alias por ahora
+                                    authorId = recipeJson.optLong("author_id", recipeJson.optLong("authorId", -1)),
+                                    authorName = authorName,
+                                    authorAlias = authorAlias,
+                                    authorAvatar = authorAvatar,
                                     cookingTime = recipeJson.optInt("cooking_time", 0),
                                     servings = recipeJson.optInt("servings", 1),
                                     rating = recipeJson.optDouble("rating", 0.0).toFloat(),
                                     tags = recipeJson.optString("tags", null), // Obtener tags del JSON
                                     isPublished = true, // Solo obtenemos recetas publicadas
-                                    createdAt = recipeJson.getLong("created_at"),
+                                    createdAt = recipeJson.optLong("created_at", recipeJson.optLong("createdAt", 0)),
                                     imageData = imageData,
                                     images = imagesList
                                 )
@@ -800,6 +808,129 @@ class ApiService(private val context: Context) {
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error consultando recetas con like", e)
+            Result.failure(e)
+        }
+    }
+    
+    /**
+     * Obtener recetas publicadas por un usuario en MySQL
+     */
+    suspend fun getUserPublishedRecipes(userId: Long): Result<List<UserRecipeData>> = withContext(Dispatchers.IO) {
+        try {
+            val url = URL("$BASE_URL/users/$userId/recipes")
+            Log.d(TAG, "Consultando recetas publicadas del usuario: $url")
+            val connection = url.openConnection() as HttpURLConnection
+            
+            try {
+                connection.requestMethod = "GET"
+                connection.connectTimeout = 10000
+                connection.readTimeout = 10000
+                
+                val responseCode = connection.responseCode
+                Log.d(TAG, "Respuesta del servidor (user recipes): $responseCode")
+                
+                val response = BufferedReader(InputStreamReader(
+                    if (responseCode == HttpURLConnection.HTTP_OK) connection.inputStream else connection.errorStream
+                )).readText()
+                
+                Log.d(TAG, "Respuesta completa (primeros 800 chars): ${response.take(800)}")
+                
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    val jsonResponse = JSONObject(response)
+                    if (!jsonResponse.has("data")) {
+                        Log.e(TAG, "Respuesta inválida: falta campo 'data'")
+                        return@withContext Result.failure(Exception("Respuesta inválida del servidor"))
+                    }
+                    
+                    val dataObj = jsonResponse.getJSONObject("data")
+                    val recipesArray = dataObj.optJSONArray("recipes") ?: JSONArray()
+                    
+                    val recipes = mutableListOf<UserRecipeData>()
+                    for (i in 0 until recipesArray.length()) {
+                        val recipeJson = recipesArray.getJSONObject(i)
+                        
+                        val authorId = recipeJson.optLong("author_id", recipeJson.optLong("authorId", -1))
+                        val authorName = recipeJson.optString("author_name", recipeJson.optString("authorName", ""))
+                        val cookingTime = recipeJson.optInt("cooking_time", recipeJson.optInt("cookingTime", 0))
+                        val servings = recipeJson.optInt("servings", 1)
+                        val isPublished = recipeJson.optBoolean("is_published", recipeJson.optBoolean("isPublished", false))
+                        val createdAt = recipeJson.optLong("created_at", recipeJson.optLong("createdAt", 0))
+                        val updatedAt = if (recipeJson.has("updated_at")) {
+                            recipeJson.optLong("updated_at")
+                        } else {
+                            recipeJson.optLong("updatedAt", createdAt)
+                        }
+                        
+                        val imagesList = mutableListOf<ByteArray>()
+                        var imageData: ByteArray? = null
+                        
+                        if (recipeJson.has("images") && !recipeJson.isNull("images")) {
+                            val imagesArray = recipeJson.getJSONArray("images")
+                            for (j in 0 until imagesArray.length()) {
+                                try {
+                                    val base64Image = imagesArray.getString(j)
+                                    if (base64Image.isNotEmpty()) {
+                                        val cleanedBase64 = base64Image.trim().replace("\n", "").replace("\r", "").replace(" ", "")
+                                        if (cleanedBase64.isNotEmpty()) {
+                                            val decoded = Base64.decode(cleanedBase64, Base64.DEFAULT)
+                                            imagesList.add(decoded)
+                                        }
+                                    }
+                                } catch (e: Exception) {
+                                    Log.e(TAG, "Error decodificando imagen ${j + 1} para receta ${recipeJson.optLong("id")}", e)
+                                }
+                            }
+                            imageData = imagesList.firstOrNull()
+                        } else if (recipeJson.has("image_data") && !recipeJson.isNull("image_data")) {
+                            try {
+                                val base64Image = recipeJson.getString("image_data")
+                                val cleanedBase64 = base64Image.trim().replace("\n", "").replace("\r", "").replace(" ", "")
+                                if (cleanedBase64.isNotEmpty()) {
+                                    imageData = Base64.decode(cleanedBase64, Base64.DEFAULT)
+                                    imagesList.add(imageData)
+                                }
+                            } catch (e: Exception) {
+                                Log.e(TAG, "Error decodificando image_data para receta ${recipeJson.optLong("id")}", e)
+                            }
+                        }
+                        
+                        val description = recipeJson.optString("description", "").takeIf { it.isNotBlank() }
+                        val ingredients = recipeJson.optString("ingredients", "").takeIf { it.isNotBlank() }
+                        val steps = recipeJson.optString("steps", "").takeIf { it.isNotBlank() }
+                        val tags = recipeJson.optString("tags", "").takeIf { it.isNotBlank() }
+                        
+                        val recipe = UserRecipeData(
+                            id = recipeJson.getLong("id"),
+                            title = recipeJson.getString("title"),
+                            description = description,
+                            ingredients = ingredients,
+                            steps = steps,
+                            authorId = authorId,
+                            authorName = authorName,
+                            tags = tags,
+                            cookingTime = cookingTime,
+                            servings = servings,
+                            rating = recipeJson.optDouble("rating", 0.0).toFloat(),
+                            isPublished = isPublished,
+                            createdAt = createdAt,
+                            updatedAt = if (updatedAt == 0L) null else updatedAt,
+                            images = imagesList,
+                            imageData = imageData
+                        )
+                        recipes.add(recipe)
+                    }
+                    
+                    Log.d(TAG, "Recetas publicadas encontradas: ${recipes.size}")
+                    Result.success(recipes)
+                } else {
+                    Log.e(TAG, "Error HTTP $responseCode al obtener recetas del usuario: $response")
+                    Result.failure(Exception("Error obteniendo recetas del usuario: $responseCode"))
+                }
+            } finally {
+                connection.disconnect()
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "Error consultando recetas del usuario", e)
             Result.failure(e)
         }
     }
@@ -929,13 +1060,18 @@ class ApiService(private val context: Context) {
                                     recipeJson.getLong("createdAt")
                                 }
                                 
+                                val authorAlias = recipeJson.optString("author_alias", recipeJson.optString("authorAlias", authorName))
+                                val authorAvatar = recipeJson.optString("author_avatar", recipeJson.optString("authorAvatar", null))
+                                    .takeIf { it.isNotBlank() }
+                                
                                 val recipe = RecipeFeedData(
                                     id = recipeJson.getLong("id"),
                                     title = recipeJson.getString("title"),
                                     description = recipeJson.optString("description", ""),
                                     authorId = authorId,
                                     authorName = authorName,
-                                    authorAlias = authorName, // Usar author_name como alias
+                                    authorAlias = authorAlias,
+                                    authorAvatar = authorAvatar,
                                     cookingTime = cookingTime,
                                     servings = recipeJson.optInt("servings", 1),
                                     rating = recipeJson.optDouble("rating", 0.0).toFloat(),
@@ -1048,13 +1184,18 @@ class ApiService(private val context: Context) {
                                 val authorName = recipeJson.optString("author_name", recipeJson.optString("authorName", ""))
                                 val createdAt = recipeJson.optLong("created_at", recipeJson.optLong("createdAt", 0))
                                 
+                                val authorAlias = recipeJson.optString("author_alias", recipeJson.optString("authorAlias", authorName))
+                                val authorAvatar = recipeJson.optString("author_avatar", recipeJson.optString("authorAvatar", null))
+                                    .takeIf { it.isNotBlank() }
+                                
                                 val recipe = RecipeFeedData(
                                     id = recipeJson.getLong("id"),
                                     title = recipeJson.getString("title"),
                                     description = recipeJson.optString("description", ""),
                                     authorId = authorId,
                                     authorName = authorName,
-                                    authorAlias = authorName,
+                                    authorAlias = authorAlias,
+                                    authorAvatar = authorAvatar,
                                     cookingTime = recipeJson.optInt("cooking_time", recipeJson.optInt("cookingTime", 0)),
                                     servings = recipeJson.optInt("servings", 1),
                                     rating = recipeJson.optDouble("rating", 0.0).toFloat(),
@@ -1736,6 +1877,7 @@ class ApiService(private val context: Context) {
         val authorId: Long,
         val authorName: String,
         val authorAlias: String,
+        val authorAvatar: String? = null,
         val cookingTime: Int,
         val servings: Int,
         val rating: Float,
@@ -1747,6 +1889,28 @@ class ApiService(private val context: Context) {
         val likes: Int = 0,
         val dislikes: Int = 0,
         val voteType: Int = -1 // -1 = sin voto, 0 = dislike, 1 = like
+    )
+    
+    /**
+     * Data class para recetas publicadas de un usuario
+     */
+    data class UserRecipeData(
+        val id: Long,
+        val title: String,
+        val description: String?,
+        val ingredients: String?,
+        val steps: String?,
+        val authorId: Long,
+        val authorName: String,
+        val tags: String?,
+        val cookingTime: Int,
+        val servings: Int,
+        val rating: Float,
+        val isPublished: Boolean,
+        val createdAt: Long,
+        val updatedAt: Long?,
+        val images: List<ByteArray> = emptyList(),
+        val imageData: ByteArray? = null
     )
     
     /**

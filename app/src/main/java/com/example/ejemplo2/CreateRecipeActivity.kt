@@ -13,12 +13,17 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.ProgressBar
+import android.widget.TextView
 import android.widget.Toast
 import android.util.Log
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.example.ejemplo2.data.database.AppDatabase
 import com.example.ejemplo2.data.repository.RecipeRepository
+import com.example.ejemplo2.data.entity.Recipe
 import com.example.ejemplo2.data.api.ApiService
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
@@ -29,8 +34,182 @@ import java.io.InputStream
 class CreateRecipeActivity : AppCompatActivity() {
     
     companion object {
-        private const val REQUEST_CODE_GALLERY = 100
         private const val REQUEST_CODE_CAMERA = 101
+    }
+
+    private suspend fun loadRecipeForEditing() {
+        try {
+            val recipe = recipeRepository.getRecipeById(editingRecipeId)
+            if (recipe == null) {
+                withContext(Dispatchers.Main) {
+                    Toast.makeText(this@CreateRecipeActivity, getString(R.string.edit_recipe_load_error), Toast.LENGTH_LONG).show()
+                    finish()
+                }
+                return
+            }
+            editingRecipe = recipe
+            
+            val imagesFromDatabase = withContext(Dispatchers.IO) {
+                AppDatabase.getDatabase(this@CreateRecipeActivity)
+                    .recipeImageDao()
+                    .getImagesByRecipeId(editingRecipeId)
+                    .first()
+            }
+            
+            val decodedImages = imagesFromDatabase.mapNotNull { image ->
+                try {
+                    val bitmap = BitmapFactory.decodeByteArray(image.imageData, 0, image.imageData.size)
+                    val description = image.description ?: ""
+                    bitmap?.let { it to description }
+                } catch (e: Exception) {
+                    Log.e("CreateRecipeActivity", "Error decodificando imagen ${image.id}: ${e.message}", e)
+                    null
+                }
+            }
+            
+            withContext(Dispatchers.Main) {
+                val recipeTitleView = findViewById<EditText>(R.id.recipeTitle)
+                val recipeDescriptionView = findViewById<EditText>(R.id.recipeDescription)
+                val recipeStepsView = findViewById<EditText>(R.id.recipeSteps)
+                val cookingTimeView = findViewById<EditText>(R.id.cookingTimeInput)
+                val servingsView = findViewById<EditText>(R.id.servingsInput)
+                val ingredientsContainer = findViewById<LinearLayout>(R.id.ingredientsContainer)
+                val imagesContainer = findViewById<LinearLayout>(R.id.imagesContainer)
+                
+                recipeTitleView.setText(recipe.title)
+                recipeDescriptionView.setText(recipe.description)
+                recipeStepsView.setText(recipe.steps)
+                if (recipe.cookingTime > 0) {
+                    cookingTimeView.setText(recipe.cookingTime.toString())
+                } else {
+                    cookingTimeView.text?.clear()
+                }
+                if (recipe.servings > 0) {
+                    servingsView.setText(recipe.servings.toString())
+                } else {
+                    servingsView.text?.clear()
+                }
+                
+                val ingredientsList = recipe.ingredients.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+                ingredientsContainer.removeAllViews()
+                if (ingredientsList.isEmpty()) {
+                    addIngredientField(ingredientsContainer)
+                } else {
+                    ingredientsList.forEach { addIngredientField(ingredientsContainer, it) }
+                }
+                
+                selectedImages.clear()
+                imagesContainer.removeAllViews()
+                decodedImages.forEach { (bitmap, description) ->
+                    addImageToContainer(bitmap, description)
+                }
+            }
+        } catch (e: Exception) {
+            Log.e("CreateRecipeActivity", "Error cargando receta para editar: ${e.message}", e)
+            withContext(Dispatchers.Main) {
+                Toast.makeText(this@CreateRecipeActivity, getString(R.string.edit_recipe_load_error), Toast.LENGTH_LONG).show()
+                finish()
+            }
+        }
+    }
+
+    private suspend fun saveEditedRecipeInternal(
+        title: String,
+        description: String,
+        ingredientsText: String,
+        steps: String,
+        cookingTime: Int,
+        servings: Int,
+        imagesList: List<Pair<Bitmap, String>>,
+        draftButton: Button,
+        publishButton: Button,
+        progressBar: ProgressBar,
+        originalDraftText: String,
+        originalPublishText: String
+    ) {
+        val recipeToUpdate = editingRecipe
+        if (recipeToUpdate == null) {
+            withContext(Dispatchers.Main) {
+                progressBar.visibility = View.GONE
+                draftButton.isEnabled = true
+                publishButton.isEnabled = true
+                draftButton.text = getString(R.string.edit_recipe_save_changes)
+                Toast.makeText(this@CreateRecipeActivity, getString(R.string.edit_recipe_load_error), Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+        
+        val updatedRecipe = recipeToUpdate.copy(
+            title = title,
+            description = description,
+            ingredients = ingredientsText,
+            steps = steps,
+            cookingTime = cookingTime,
+            servings = servings,
+            updatedAt = System.currentTimeMillis()
+        )
+        
+        val updateResult = recipeRepository.updateRecipe(updatedRecipe)
+        if (!updateResult.isValid) {
+            withContext(Dispatchers.Main) {
+                progressBar.visibility = View.GONE
+                draftButton.isEnabled = true
+                publishButton.isEnabled = true
+                draftButton.text = getString(R.string.edit_recipe_save_changes)
+                Toast.makeText(this@CreateRecipeActivity, updateResult.message, Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+        
+        try {
+            val imagesValidation = withContext(Dispatchers.IO) {
+                val recipeImageDao = AppDatabase.getDatabase(this@CreateRecipeActivity).recipeImageDao()
+                recipeImageDao.deleteImagesByRecipeId(editingRecipeId)
+                if (imagesList.isNotEmpty()) {
+                    recipeRepository.saveRecipeImages(editingRecipeId, imagesList)
+                } else {
+                    null
+                }
+            }
+            
+            if (imagesValidation != null && !imagesValidation.isValid) {
+                withContext(Dispatchers.Main) {
+                    progressBar.visibility = View.GONE
+                    draftButton.isEnabled = true
+                    publishButton.isEnabled = true
+                    draftButton.text = getString(R.string.edit_recipe_save_changes)
+                    Toast.makeText(
+                        this@CreateRecipeActivity,
+                        imagesValidation.message ?: "Error actualizando imágenes",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+                return
+            }
+        } catch (e: Exception) {
+            Log.e("CreateRecipeActivity", "Error actualizando imágenes: ${e.message}", e)
+            withContext(Dispatchers.Main) {
+                progressBar.visibility = View.GONE
+                draftButton.isEnabled = true
+                publishButton.isEnabled = true
+                draftButton.text = getString(R.string.edit_recipe_save_changes)
+                Toast.makeText(this@CreateRecipeActivity, "Error actualizando imágenes: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+            return
+        }
+        
+        editingRecipe = updatedRecipe
+        
+        withContext(Dispatchers.Main) {
+            progressBar.visibility = View.GONE
+            draftButton.isEnabled = true
+            publishButton.isEnabled = true
+            draftButton.text = getString(R.string.edit_recipe_save_changes)
+            publishButton.text = originalPublishText
+            Toast.makeText(this@CreateRecipeActivity, getString(R.string.edit_recipe_saved), Toast.LENGTH_SHORT).show()
+            setResult(Activity.RESULT_OK)
+            finish()
+        }
     }
     
     private lateinit var recipeRepository: RecipeRepository
@@ -39,6 +218,9 @@ class CreateRecipeActivity : AppCompatActivity() {
     private var currentUserMySQLId: Long = -1 // ID de MySQL
     private var currentUserName: String = ""
     private var currentUserEmail: String = ""
+    private var isEditMode: Boolean = false
+    private var editingRecipeId: Long = -1
+    private var editingRecipe: Recipe? = null
     
     // Lista para almacenar las imágenes seleccionadas
     private data class RecipeImageData(
@@ -46,6 +228,12 @@ class CreateRecipeActivity : AppCompatActivity() {
         var description: String = ""
     )
     private val selectedImages = mutableListOf<RecipeImageData>()
+
+    private val galleryLauncher = registerForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let { handleSelectedImage(it) }
+    }
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -60,6 +248,8 @@ class CreateRecipeActivity : AppCompatActivity() {
             currentUserId = savedInstanceState.getLong("saved_user_id", -1)
             currentUserName = savedInstanceState.getString("saved_user_name") ?: ""
             currentUserEmail = savedInstanceState.getString("saved_user_email") ?: ""
+            isEditMode = savedInstanceState.getBoolean("saved_is_edit_mode", isEditMode)
+            editingRecipeId = savedInstanceState.getLong("saved_recipe_id", editingRecipeId)
             Log.d("CreateRecipeActivity", "Datos restaurados desde savedInstanceState - Email: '$currentUserEmail'")
         }
         
@@ -79,6 +269,16 @@ class CreateRecipeActivity : AppCompatActivity() {
             currentUserEmail = userEmailFromIntent
         }
         
+        isEditMode = intent.getBooleanExtra("is_edit_mode", false)
+        if (isEditMode) {
+            editingRecipeId = intent.getLongExtra("recipe_id", -1)
+            if (editingRecipeId == -1L) {
+                Toast.makeText(this, "No se pudo cargar la receta para editar", Toast.LENGTH_LONG).show()
+                finish()
+                return
+            }
+        }
+        
         Log.d("CreateRecipeActivity", "Email recibido del intent: '$userEmailFromIntent', Email final: '$currentUserEmail'")
 
         // Validar que tenemos los datos mínimos necesarios
@@ -90,6 +290,7 @@ class CreateRecipeActivity : AppCompatActivity() {
         }
 
 
+        val screenTitle = findViewById<TextView>(R.id.screenTitle)
         val backButton = findViewById<View>(R.id.backButton)
         val recipeTitle = findViewById<EditText>(R.id.recipeTitle)
         val addIngredientButton = findViewById<Button>(R.id.addIngredientButton)
@@ -124,9 +325,18 @@ class CreateRecipeActivity : AppCompatActivity() {
             saveRecipe(false) // Guardar como borrador
         }
 
-        // Botón de publicar
-        publishButton.setOnClickListener {
-            saveRecipe(true) // Publicar receta
+        if (isEditMode) {
+            screenTitle.text = getString(R.string.edit_recipe_title)
+            draftButton.text = getString(R.string.edit_recipe_save_changes)
+            publishButton.visibility = View.GONE
+            lifecycleScope.launch {
+                loadRecipeForEditing()
+            }
+        } else {
+            // Botón de publicar
+            publishButton.setOnClickListener {
+                saveRecipe(true) // Publicar receta
+            }
         }
 
         // Navegación inferior
@@ -171,7 +381,7 @@ class CreateRecipeActivity : AppCompatActivity() {
         }
     }
 
-    private fun addIngredientField(container: LinearLayout) {
+    private fun addIngredientField(container: LinearLayout, value: String? = null) {
         val ingredientField = EditText(this).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -188,6 +398,9 @@ class CreateRecipeActivity : AppCompatActivity() {
             setBackgroundResource(R.drawable.rounded_background)
             setTextColor(android.graphics.Color.WHITE) // Texto blanco para contraste
             setHintTextColor(android.graphics.Color.WHITE) // Placeholder blanco
+            value?.let {
+                setText(it)
+            }
         }
         container.addView(ingredientField)
     }
@@ -239,34 +452,61 @@ class CreateRecipeActivity : AppCompatActivity() {
             return
         }
         
-        // Deshabilitar botones mientras se guarda
         val draftButton = findViewById<Button>(R.id.draftButton)
         val publishButton = findViewById<Button>(R.id.publishButton)
         val progressBar = findViewById<ProgressBar>(R.id.saveProgressBar)
+        val originalDraftText = draftButton.text.toString()
+        val originalPublishText = publishButton.text.toString()
         
         draftButton.isEnabled = false
         publishButton.isEnabled = false
+        progressBar.visibility = View.VISIBLE
         
-        // Mostrar indicador de carga
-        progressBar.visibility = android.view.View.VISIBLE
+        val savingText = getString(R.string.recipe_action_saving)
+        val publishingText = getString(R.string.recipe_action_publishing)
         
-        val buttonText = if (isPublished) "Publicando..." else "Guardando..."
-        if (isPublished) {
-            publishButton.text = buttonText
+        if (isPublished && !isEditMode) {
+            publishButton.text = publishingText
         } else {
-            draftButton.text = buttonText
+            draftButton.text = savingText
         }
+        
+        val ingredientsText = ingredients.joinToString(", ")
+        val imagesList = selectedImages.map { it.bitmap to it.description }
         
         lifecycleScope.launch {
             try {
-                val ingredientsText = ingredients.joinToString(", ")
-                
-                // Convertir las imágenes a lista de Pair<Bitmap, String>
-                val imagesList = selectedImages.map { imageData ->
-                    Pair(imageData.bitmap, imageData.description)
+                val authorReady = ensureAuthorInformation()
+                if (!authorReady) {
+                    withContext(Dispatchers.Main) {
+                        progressBar.visibility = View.GONE
+                        draftButton.isEnabled = true
+                        publishButton.isEnabled = true
+                        draftButton.text = originalDraftText
+                        publishButton.text = originalPublishText
+                        Toast.makeText(this@CreateRecipeActivity, "Error: No se pudo obtener el nombre del autor", Toast.LENGTH_LONG).show()
+                    }
+                    return@launch
+                }
+
+                if (isEditMode) {
+                    saveEditedRecipeInternal(
+                        title = title,
+                        description = description,
+                        ingredientsText = ingredientsText,
+                        steps = steps,
+                        cookingTime = cookingTime,
+                        servings = servings,
+                        imagesList = imagesList,
+                        draftButton = draftButton,
+                        publishButton = publishButton,
+                        progressBar = progressBar,
+                        originalDraftText = originalDraftText,
+                        originalPublishText = originalPublishText
+                    )
+                    return@launch
                 }
                 
-                // Obtener el ID de MySQL del usuario antes de crear la receta
                 if (currentUserEmail.isBlank()) {
                     Toast.makeText(this@CreateRecipeActivity, "Error: Email del usuario no disponible", Toast.LENGTH_LONG).show()
                     Log.e("CreateRecipeActivity", "Email vacío o no disponible")
@@ -293,14 +533,13 @@ class CreateRecipeActivity : AppCompatActivity() {
                 currentUserMySQLId = user.id
                 Log.d("CreateRecipeActivity", "ID MySQL obtenido exitosamente: $currentUserMySQLId para email: $currentUserEmail")
                 
-                // PRIMERO: Siempre guardar en SQLite local
                 Log.d("CreateRecipeActivity", "Guardando receta en SQLite local...")
                 val localResult = recipeRepository.createRecipeWithImages(
                     title = title,
                     description = description,
                     ingredients = ingredientsText,
                     steps = steps,
-                    authorId = currentUserId, // Usar ID de SQLite para referencia local
+                    authorId = currentUserId,
                     authorName = currentUserName,
                     cookingTime = cookingTime,
                     servings = servings,
@@ -313,8 +552,8 @@ class CreateRecipeActivity : AppCompatActivity() {
                         progressBar.visibility = View.GONE
                         draftButton.isEnabled = true
                         publishButton.isEnabled = true
-                        draftButton.text = "Borrador"
-                        publishButton.text = "Publicar"
+                        draftButton.text = originalDraftText
+                        publishButton.text = originalPublishText
                     }
                     Toast.makeText(this@CreateRecipeActivity, "Error guardando localmente: ${localResult.message}", Toast.LENGTH_LONG).show()
                     Log.e("CreateRecipeActivity", "Error guardando en SQLite: ${localResult.message}")
@@ -323,7 +562,6 @@ class CreateRecipeActivity : AppCompatActivity() {
                 
                 Log.d("CreateRecipeActivity", "✓ Receta guardada en SQLite local: ${localResult.recipeId}")
                 
-                // SEGUNDO: Solo si está publicada, subir a MySQL
                 if (isPublished) {
                     Log.d("CreateRecipeActivity", "Receta marcada como publicada - subiendo a MySQL...")
                     
@@ -334,53 +572,36 @@ class CreateRecipeActivity : AppCompatActivity() {
                         steps = steps,
                         authorId = currentUserMySQLId,
                         authorName = currentUserName,
-                        tags = null, // Por ahora sin tags
+                        tags = null,
                         cookingTime = cookingTime,
                         servings = servings,
-                        isPublished = true, // Siempre true cuando se publica
+                        isPublished = true,
                         images = imagesList
                     )
                     
                     if (mysqlResult.isSuccess) {
-                        val mysqlRecipeId = mysqlResult.getOrNull()
-                        Log.d("CreateRecipeActivity", "✓ Receta publicada en MySQL con ID: $mysqlRecipeId")
-                        
-                        // Actualizar la receta local con el ID de MySQL si es necesario
-                        // (opcional: mantener sincronización de IDs)
+                        Log.d("CreateRecipeActivity", "✓ Receta publicada en MySQL con ID: ${mysqlResult.getOrNull()}")
                         withContext(Dispatchers.Main) {
-                            progressBar.visibility = View.GONE
-                            draftButton.isEnabled = true
-                            publishButton.isEnabled = true
-                            draftButton.text = "Borrador"
-                            publishButton.text = "Publicar"
+                            Toast.makeText(this@CreateRecipeActivity, "Receta publicada exitosamente", Toast.LENGTH_LONG).show()
                         }
-                        Toast.makeText(this@CreateRecipeActivity, "Receta publicada exitosamente", Toast.LENGTH_LONG).show()
                     } else {
                         val error = mysqlResult.exceptionOrNull()
                         Log.e("CreateRecipeActivity", "Error publicando en MySQL: ${error?.message}")
                         withContext(Dispatchers.Main) {
-                            progressBar.visibility = View.GONE
-                            draftButton.isEnabled = true
-                            publishButton.isEnabled = true
-                            draftButton.text = "Borrador"
-                            publishButton.text = "Publicar"
+                            Toast.makeText(
+                                this@CreateRecipeActivity,
+                                "Receta guardada localmente. Error publicando: ${error?.message ?: "Error desconocido"}",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
-                        Toast.makeText(this@CreateRecipeActivity, "Receta guardada localmente. Error publicando: ${error?.message ?: "Error desconocido"}", Toast.LENGTH_LONG).show()
                     }
                 } else {
-                    // Es borrador, solo guardado localmente
                     Log.d("CreateRecipeActivity", "✓ Receta guardada como borrador (solo local)")
                     withContext(Dispatchers.Main) {
-                        progressBar.visibility = View.GONE
-                        draftButton.isEnabled = true
-                        publishButton.isEnabled = true
-                        draftButton.text = "Borrador"
-                        publishButton.text = "Publicar"
+                        Toast.makeText(this@CreateRecipeActivity, "Receta guardada como borrador", Toast.LENGTH_SHORT).show()
                     }
-                    Toast.makeText(this@CreateRecipeActivity, "Receta guardada como borrador", Toast.LENGTH_SHORT).show()
                 }
                 
-                // Navegar al dashboard pasando el correo (en el hilo principal)
                 withContext(Dispatchers.Main) {
                     val emailToPass = currentUserEmail.ifEmpty {
                         this@CreateRecipeActivity.intent.getStringExtra("user_email") ?: ""
@@ -389,7 +610,7 @@ class CreateRecipeActivity : AppCompatActivity() {
                     Log.d("CreateRecipeActivity", "Receta guardada - navegando a MainActivity (Dashboard) con email: '$emailToPass'")
                     val intent = Intent(this@CreateRecipeActivity, MainActivity::class.java)
                     intent.putExtra("user_id", currentUserId)
-                    intent.putExtra("user_email", emailToPass) // SIEMPRE pasar el correo
+                    intent.putExtra("user_email", emailToPass)
                     if (currentUserName.isNotEmpty()) {
                         intent.putExtra("user_name", currentUserName)
                     }
@@ -403,18 +624,19 @@ class CreateRecipeActivity : AppCompatActivity() {
                     progressBar.visibility = View.GONE
                     draftButton.isEnabled = true
                     publishButton.isEnabled = true
-                    draftButton.text = "Borrador"
-                    publishButton.text = "Publicar"
+                    draftButton.text = if (isEditMode) getString(R.string.edit_recipe_save_changes) else originalDraftText
+                    publishButton.text = originalPublishText
                 }
                 Toast.makeText(this@CreateRecipeActivity, "Error: ${e.message}", Toast.LENGTH_LONG).show()
             } finally {
-                // Asegurar que el ProgressBar esté oculto y los botones habilitados
-                withContext(Dispatchers.Main) {
-                    progressBar.visibility = View.GONE
-                    draftButton.isEnabled = true
-                    publishButton.isEnabled = true
-                    draftButton.text = "Borrador"
-                    publishButton.text = "Publicar"
+                if (!isEditMode) {
+                    withContext(Dispatchers.Main) {
+                        progressBar.visibility = View.GONE
+                        draftButton.isEnabled = true
+                        publishButton.isEnabled = true
+                        draftButton.text = originalDraftText
+                        publishButton.text = originalPublishText
+                    }
                 }
             }
         }
@@ -435,8 +657,7 @@ class CreateRecipeActivity : AppCompatActivity() {
     }
     
     private fun openGallery() {
-        val intent = Intent(Intent.ACTION_PICK, MediaStore.Images.Media.EXTERNAL_CONTENT_URI)
-        startActivityForResult(intent, REQUEST_CODE_GALLERY)
+        galleryLauncher.launch("image/*")
     }
     
     private fun openCamera() {
@@ -449,11 +670,6 @@ class CreateRecipeActivity : AppCompatActivity() {
         
         if (resultCode == Activity.RESULT_OK) {
             when (requestCode) {
-                REQUEST_CODE_GALLERY -> {
-                    data?.data?.let { uri ->
-                        handleSelectedImage(uri)
-                    }
-                }
                 REQUEST_CODE_CAMERA -> {
                     val bitmap = data?.extras?.get("data") as? Bitmap
                     bitmap?.let { handleCameraImage(it) }
@@ -490,7 +706,7 @@ class CreateRecipeActivity : AppCompatActivity() {
         }
     }
     
-    private fun addImageToContainer(bitmap: Bitmap) {
+    private fun addImageToContainer(bitmap: Bitmap, initialDescription: String? = null) {
         val imagesContainer = findViewById<LinearLayout>(R.id.imagesContainer)
         
         // Inflar el layout del item de imagen
@@ -500,14 +716,12 @@ class CreateRecipeActivity : AppCompatActivity() {
         val imageView = imageItemView.findViewById<ImageView>(R.id.recipeImageView)
         imageView.setImageBitmap(bitmap)
         
-        // Obtener el EditText de descripción
         val descriptionInput = imageItemView.findViewById<EditText>(R.id.imageDescriptionInput)
         
-        // Crear objeto de datos de imagen
-        val imageData = RecipeImageData(bitmap, "")
+        val imageData = RecipeImageData(bitmap, initialDescription ?: "")
         selectedImages.add(imageData)
+        descriptionInput.setText(initialDescription ?: "")
         
-        // Listener para actualizar la descripción cuando el usuario escriba
         descriptionInput.addTextChangedListener(object : android.text.TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
@@ -530,12 +744,67 @@ class CreateRecipeActivity : AppCompatActivity() {
         imagesContainer.addView(imageItemView)
     }
     
+    private suspend fun ensureAuthorInformation(): Boolean {
+        if (currentUserName.isNotBlank() && currentUserId != -1L) {
+            return true
+        }
+
+        if (currentUserId != -1L) {
+            try {
+                val localUser = withContext(Dispatchers.IO) {
+                    AppDatabase.getDatabase(this@CreateRecipeActivity)
+                        .userDao()
+                        .getUserById(currentUserId)
+                }
+                if (localUser != null) {
+                    if (currentUserEmail.isBlank()) {
+                        currentUserEmail = localUser.email
+                    }
+                    val composedName = listOfNotNull(
+                        localUser.name.takeIf { it.isNotBlank() },
+                        localUser.lastName.takeIf { it.isNotBlank() }
+                    ).joinToString(" ").trim()
+                    currentUserName = if (composedName.isNotBlank()) composedName else localUser.alias
+                }
+            } catch (e: Exception) {
+                Log.e("CreateRecipeActivity", "Error obteniendo usuario local: ${e.message}", e)
+            }
+        }
+
+        if (currentUserName.isBlank() && currentUserEmail.isNotBlank()) {
+            try {
+                val remoteResult = apiService.getUserByEmail(currentUserEmail)
+                if (remoteResult.isSuccess) {
+                    val user = remoteResult.getOrNull()
+                    if (user != null) {
+                        if (currentUserId == -1L) {
+                            currentUserId = user.id
+                        }
+                        val composedName = listOfNotNull(
+                            user.name.takeIf { it.isNotBlank() },
+                            user.lastName.takeIf { it.isNotBlank() }
+                        ).joinToString(" ").trim()
+                        currentUserName = if (composedName.isNotBlank()) composedName else user.alias
+                    }
+                } else {
+                    Log.w("CreateRecipeActivity", "No se pudo obtener usuario remoto para email: '$currentUserEmail'")
+                }
+            } catch (e: Exception) {
+                Log.e("CreateRecipeActivity", "Error obteniendo usuario remoto: ${e.message}", e)
+            }
+        }
+
+        return currentUserName.isNotBlank()
+    }
+
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         // Guardar datos del usuario para preservarlos
         outState.putLong("saved_user_id", currentUserId)
         outState.putString("saved_user_name", currentUserName)
         outState.putString("saved_user_email", currentUserEmail)
+        outState.putBoolean("saved_is_edit_mode", isEditMode)
+        outState.putLong("saved_recipe_id", editingRecipeId)
         Log.d("CreateRecipeActivity", "Datos guardados en savedInstanceState - Email: '$currentUserEmail'")
     }
     

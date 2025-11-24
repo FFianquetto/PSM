@@ -32,6 +32,8 @@ class MainActivity : AppCompatActivity() {
     private var currentUserEmail: String = ""
     private lateinit var apiService: ApiService
     private lateinit var recipeFeedAdapter: RecipeFeedAdapter
+    private lateinit var recipesRecyclerView: RecyclerView
+    private lateinit var feedProgressBar: ProgressBar
     
     companion object {
         // Removido REQUEST_CODE_CREATE_PUBLICATION
@@ -46,6 +48,9 @@ class MainActivity : AppCompatActivity() {
         // Inicializar servicios
         apiService = ApiService(this)
 
+        // // TEMPORAL: Resetear SQLite al abrir la app
+        // resetSQLiteDatabase()
+
         // Restaurar datos del usuario desde savedInstanceState si existe
         if (savedInstanceState != null) {
             currentUserId = savedInstanceState.getLong("saved_user_id", -1)
@@ -56,6 +61,9 @@ class MainActivity : AppCompatActivity() {
         }
 
         checkUserLogin()
+
+        recipesRecyclerView = findViewById(R.id.recipesRecyclerView)
+        feedProgressBar = findViewById(R.id.feedProgressBar)
 
         setupRecipeFeed()
         setupSearchBar()
@@ -374,13 +382,10 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun setupRecipeFeed() {
-        val recyclerView = findViewById<RecyclerView>(R.id.recipesRecyclerView)
+        recipesRecyclerView.visibility = View.VISIBLE
+        Log.d("MainActivity", "RecyclerView configurado - Visibilidad inicial: ${recipesRecyclerView.visibility == View.VISIBLE}")
         
-        // Asegurar que el RecyclerView esté visible desde el inicio
-        recyclerView.visibility = View.VISIBLE
-        Log.d("MainActivity", "RecyclerView configurado - Visibilidad inicial: ${recyclerView.visibility == View.VISIBLE}")
-        
-        recyclerView.layoutManager = LinearLayoutManager(this)
+        recipesRecyclerView.layoutManager = LinearLayoutManager(this)
         
         recipeFeedAdapter = RecipeFeedAdapter(
             recipes = emptyList(),
@@ -427,7 +432,7 @@ class MainActivity : AppCompatActivity() {
             }
         )
         
-        recyclerView.adapter = recipeFeedAdapter
+        recipesRecyclerView.adapter = recipeFeedAdapter
         Log.d("MainActivity", "Adapter asignado al RecyclerView - Item count: ${recipeFeedAdapter.itemCount}")
     }
     
@@ -443,6 +448,10 @@ class MainActivity : AppCompatActivity() {
             Log.w("MainActivity", "⚠️ Adapter no inicializado aún - inicializando...")
             setupRecipeFeed()
         }
+
+        feedProgressBar.visibility = View.VISIBLE
+        recipesRecyclerView.alpha = 0.2f
+        recipesRecyclerView.isEnabled = false
         
         lifecycleScope.launch {
             try {
@@ -479,10 +488,9 @@ class MainActivity : AppCompatActivity() {
                                     }.awaitAll()
                                 }
                                 withContext(Dispatchers.Main) {
-                                    val recyclerView = findViewById<RecyclerView>(R.id.recipesRecyclerView)
-                                    if (recyclerView.adapter == null) recyclerView.adapter = recipeFeedAdapter
+                                    if (recipesRecyclerView.adapter == null) recipesRecyclerView.adapter = recipeFeedAdapter
                                     recipeFeedAdapter.updateRecipes(feedItemsRetry)
-                                    recyclerView.visibility = View.VISIBLE
+                                    recipesRecyclerView.visibility = View.VISIBLE
                                 }
                                 return@launch
                             }
@@ -503,33 +511,25 @@ class MainActivity : AppCompatActivity() {
                     withContext(Dispatchers.Main) {
                         Log.d("MainActivity", "=== ACTUALIZANDO FEED CON ${feedItems.size} RECETAS ===")
                         
-                        // Verificar que el RecyclerView está configurado y visible ANTES de actualizar
-                        val recyclerView = findViewById<RecyclerView>(R.id.recipesRecyclerView)
-                        
-                        if (recyclerView.adapter == null) {
+                        if (recipesRecyclerView.adapter == null) {
                             Log.e("MainActivity", "ERROR: RecyclerView no tiene adapter asignado - asignando...")
-                            recyclerView.adapter = recipeFeedAdapter
+                            recipesRecyclerView.adapter = recipeFeedAdapter
                         }
                         
-                        // Actualizar el adaptador con las nuevas recetas
                         recipeFeedAdapter.updateRecipes(feedItems)
-                        
-                        // Asegurar que el RecyclerView esté visible
-                        recyclerView.visibility = View.VISIBLE
-                        
-                        // Forzar un redraw del RecyclerView
-                        recyclerView.invalidate()
-                        recyclerView.requestLayout()
+                        recipesRecyclerView.visibility = View.VISIBLE
+                        recipesRecyclerView.invalidate()
+                        recipesRecyclerView.requestLayout()
                         
                         Log.d("MainActivity", "✓ Feed actualizado exitosamente")
                         Log.d("MainActivity", "  - Total items en adapter: ${recipeFeedAdapter.itemCount}")
-                        Log.d("MainActivity", "  - RecyclerView visible: ${recyclerView.visibility == View.VISIBLE}")
-                        Log.d("MainActivity", "  - RecyclerView adapter items: ${recyclerView.adapter?.itemCount}")
-                        Log.d("MainActivity", "  - RecyclerView height: ${recyclerView.height}")
-                        Log.d("MainActivity", "  - RecyclerView width: ${recyclerView.width}")
+                        Log.d("MainActivity", "  - RecyclerView visible: ${recipesRecyclerView.visibility == View.VISIBLE}")
+                        Log.d("MainActivity", "  - RecyclerView adapter items: ${recipesRecyclerView.adapter?.itemCount}")
+                        Log.d("MainActivity", "  - RecyclerView height: ${recipesRecyclerView.height}")
+                        Log.d("MainActivity", "  - RecyclerView width: ${recipesRecyclerView.width}")
                         
                         // Verificar si hay recetas pero no se muestran
-                        if (feedItems.isNotEmpty() && recyclerView.adapter?.itemCount == 0) {
+                        if (feedItems.isNotEmpty() && recipesRecyclerView.adapter?.itemCount == 0) {
                             Log.e("MainActivity", "⚠️ PROBLEMA: Hay ${feedItems.size} recetas pero adapter muestra 0 items")
                         }
                     }
@@ -549,17 +549,15 @@ class MainActivity : AppCompatActivity() {
                             }.awaitAll()
                         }
                         withContext(Dispatchers.Main) {
-                            val recyclerView = findViewById<RecyclerView>(R.id.recipesRecyclerView)
-                            if (recyclerView.adapter == null) recyclerView.adapter = recipeFeedAdapter
+                            if (recipesRecyclerView.adapter == null) recipesRecyclerView.adapter = recipeFeedAdapter
                             recipeFeedAdapter.updateRecipes(feedItems)
-                            recyclerView.visibility = View.VISIBLE
+                            recipesRecyclerView.visibility = View.VISIBLE
                         }
                         return@launch
                     }
                     // Mostrar mensaje de error pero mantener el RecyclerView visible (puede tener recetas previas)
                     withContext(Dispatchers.Main) {
-                        val recyclerView = findViewById<RecyclerView>(R.id.recipesRecyclerView)
-                        recyclerView.visibility = View.VISIBLE // Mantener visible incluso si hay error
+                        recipesRecyclerView.visibility = View.VISIBLE // Mantener visible incluso si hay error
                         Toast.makeText(this@MainActivity, "Error cargando recetas: ${error?.message}", Toast.LENGTH_LONG).show()
                     }
                 }
@@ -568,9 +566,14 @@ class MainActivity : AppCompatActivity() {
                 Log.e("MainActivity", "Stack trace: ${e.stackTrace.joinToString("\n")}")
                 // Mantener RecyclerView visible incluso si hay error
                 withContext(Dispatchers.Main) {
-                    val recyclerView = findViewById<RecyclerView>(R.id.recipesRecyclerView)
-                    recyclerView.visibility = View.VISIBLE
+                    recipesRecyclerView.visibility = View.VISIBLE
                     Toast.makeText(this@MainActivity, "Error cargando recetas: ${e.message}", Toast.LENGTH_LONG).show()
+                }
+            } finally {
+                withContext(Dispatchers.Main) {
+                    feedProgressBar.visibility = View.GONE
+                    recipesRecyclerView.alpha = 1f
+                    recipesRecyclerView.isEnabled = true
                 }
             }
         }
@@ -766,6 +769,7 @@ class MainActivity : AppCompatActivity() {
             description = recipeData.description ?: "",
             authorName = recipeData.authorName,
             authorAlias = recipeData.authorAlias ?: recipeData.authorName,
+            authorAvatarPath = recipeData.authorAvatar,
             cookingTime = recipeData.cookingTime,
             servings = recipeData.servings,
             rating = recipeData.rating,

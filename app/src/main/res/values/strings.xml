@@ -2,4 +2,11 @@
     <string name="app_name">Ejemplo2</string>
     <string name="profile_recipe_status_draft">Borrador</string>
     <string name="profile_recipe_status_published">Publicada</string>
+    <string name="edit_recipe_title">Editar receta</string>
+    <string name="edit_recipe_save_changes">Guardar cambios</string>
+    <string name="edit_recipe_saved">Cambios guardados localmente</string>
+    <string name="edit_recipe_load_error">No se pudo cargar la receta para editar</string>
+    <string name="recipe_action_saving">Guardando...</string>
+    <string name="recipe_action_publishing">Publicando...</string>
+    <string name="author_avatar_content_description">Avatar del autor</string>
 </resources>

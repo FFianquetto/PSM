@@ -2,11 +2,13 @@ package com.example.ejemplo2.adapter
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.ImageView
 import android.widget.TextView
+import android.util.Base64
 import androidx.recyclerview.widget.RecyclerView
 import com.example.ejemplo2.R
 
@@ -16,6 +18,7 @@ data class RecipeFeedItem(
     val description: String,
     val authorName: String,
     val authorAlias: String,
+    val authorAvatarPath: String? = null,
     val cookingTime: Int,
     val servings: Int,
     val rating: Float,
@@ -34,6 +37,7 @@ class RecipeFeedAdapter(
 ) : RecyclerView.Adapter<RecipeFeedAdapter.RecipeViewHolder>() {
 
     class RecipeViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val authorAvatar: ImageView = view.findViewById(R.id.authorAvatar)
         val authorName: TextView = view.findViewById(R.id.authorName)
         val authorAlias: TextView = view.findViewById(R.id.authorAlias)
         val recipeImage: ImageView = view.findViewById(R.id.recipeImage)
@@ -60,7 +64,9 @@ class RecipeFeedAdapter(
         
         // Configurar información del autor
         holder.authorName.text = recipe.authorName
-        holder.authorAlias.text = "@${recipe.authorAlias}"
+        val aliasToDisplay = recipe.authorAlias.takeIf { it.isNotBlank() } ?: recipe.authorName
+        holder.authorAlias.text = if (aliasToDisplay.startsWith("@")) aliasToDisplay else "@$aliasToDisplay"
+        loadAuthorAvatar(holder.authorAvatar, recipe.authorAvatarPath)
         
         // Configurar imagen de la receta (usar la primera de la lista si hay múltiples)
         val imageToShow = recipe.images.firstOrNull() ?: recipe.imageData
@@ -105,12 +111,13 @@ class RecipeFeedAdapter(
         holder.servings.text = servingsText
         
         // Configurar valoración
-        val ratingText = if (recipe.rating > 0) {
-            String.format("%.1f", recipe.rating)
+        if (recipe.rating > 0) {
+            holder.rating.text = String.format("%.1f", recipe.rating)
+            holder.rating.visibility = View.VISIBLE
         } else {
-            "Sin valorar"
+            holder.rating.text = ""
+            holder.rating.visibility = View.GONE
         }
-        holder.rating.text = ratingText
         
         // Configurar etiquetas
         if (!recipe.tags.isNullOrBlank()) {
@@ -155,6 +162,63 @@ class RecipeFeedAdapter(
         holder.itemView.setOnClickListener {
             onItemClick(recipe)
         }
+    }
+
+    private fun loadAuthorAvatar(imageView: ImageView, avatarPath: String?) {
+        if (avatarPath.isNullOrBlank()) {
+            setDefaultAvatar(imageView)
+            return
+        }
+        
+        try {
+            val bitmap = when {
+                avatarPath.startsWith("data:image", ignoreCase = true) -> {
+                    val base64Data = avatarPath.substringAfter(",", avatarPath)
+                    decodeBase64ToBitmap(base64Data)
+                }
+                isLikelyBase64(avatarPath) -> decodeBase64ToBitmap(avatarPath)
+                avatarPath.startsWith("content://") -> {
+                    imageView.context.contentResolver.openInputStream(Uri.parse(avatarPath))?.use { input ->
+                        BitmapFactory.decodeStream(input)
+                    }
+                }
+                avatarPath.startsWith("/") -> BitmapFactory.decodeFile(avatarPath)
+                else -> null
+            }
+            
+            if (bitmap != null) {
+                imageView.setImageBitmap(bitmap)
+                imageView.scaleType = ImageView.ScaleType.CENTER_CROP
+            } else {
+                setDefaultAvatar(imageView)
+            }
+        } catch (e: Exception) {
+            android.util.Log.e("RecipeFeedAdapter", "Error cargando avatar", e)
+            setDefaultAvatar(imageView)
+        }
+    }
+    
+    private fun setDefaultAvatar(imageView: ImageView) {
+        imageView.setImageResource(R.drawable.ic_profile)
+        imageView.scaleType = ImageView.ScaleType.CENTER_INSIDE
+    }
+    
+    private fun decodeBase64ToBitmap(data: String?): Bitmap? {
+        if (data.isNullOrBlank()) return null
+        return try {
+            val cleaned = data.trim().replace("\n", "").replace("\r", "").replace(" ", "")
+            if (cleaned.isEmpty()) return null
+            val decoded = Base64.decode(cleaned, Base64.DEFAULT)
+            BitmapFactory.decodeByteArray(decoded, 0, decoded.size)
+        } catch (e: Exception) {
+            null
+        }
+    }
+    
+    private fun isLikelyBase64(value: String): Boolean {
+        if (value.length < 60) return false
+        val base64Regex = Regex("^[A-Za-z0-9+/=\\s]+$")
+        return base64Regex.matches(value)
     }
 
     override fun getItemCount(): Int = recipes.size

@@ -102,6 +102,13 @@ class ApiController {
             return;
         }
         
+        // Verificar si es una petición para obtener las recetas publicadas de un usuario
+        if (preg_match('/^\/api\/users\/(\d+)\/recipes$/', $path, $matches)) {
+            $userId = (int)$matches[1];
+            $this->getUserRecipesByUserId($userId);
+            return;
+        }
+        
         // Verificar si es una petición para obtener comentarios de una receta
         if (preg_match('/^\/api\/recipes\/(\d+)\/comments$/', $path, $matches)) {
             $recipeId = (int)$matches[1];
@@ -1241,6 +1248,31 @@ class ApiController {
             error_log("ERROR en getLikedRecipesByUserId: " . $e->getMessage());
             error_log("Stack trace: " . $e->getTraceAsString());
             $this->sendResponse(['error' => 'Error obteniendo recetas con like: ' . $e->getMessage()], 500);
+        }
+    }
+    
+    /**
+     * Obtener las recetas publicadas de un usuario específico
+     */
+    private function getUserRecipesByUserId($userId) {
+        try {
+            error_log("=== getUserRecipesByUserId START - userId=$userId ===");
+            
+            $recipes = $this->recipeModel->getPublishedRecipesByUserId($userId);
+            error_log("Recetas publicadas encontradas: " . count($recipes));
+            
+            $this->sendResponse([
+                'success' => true,
+                'data' => [
+                    'recipes' => $recipes
+                ]
+            ]);
+            
+            error_log("=== getUserRecipesByUserId END ===");
+        } catch (Exception $e) {
+            error_log("ERROR en getUserRecipesByUserId: " . $e->getMessage());
+            error_log("Stack trace: " . $e->getTraceAsString());
+            $this->sendResponse(['error' => 'Error obteniendo recetas del usuario: ' . $e->getMessage()], 500);
         }
     }
     

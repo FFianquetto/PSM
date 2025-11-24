@@ -15,7 +15,8 @@ import java.util.TimeZone
 class DraftRecipesAdapter(
     private var drafts: List<Recipe> = emptyList(),
     private val onRecipeClick: (Recipe) -> Unit = {},
-    private val onPublishClick: (Recipe) -> Unit
+    private val onPublishClick: (Recipe) -> Unit,
+    private val onEditClick: (Recipe) -> Unit
 ) : RecyclerView.Adapter<DraftRecipesAdapter.DraftViewHolder>() {
 
     private val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault()).apply {
@@ -27,6 +28,7 @@ class DraftRecipesAdapter(
         val dateTextView: TextView = itemView.findViewById(R.id.recipeDate)
         val statusTextView: TextView = itemView.findViewById(R.id.recipeStatus)
         val publishButton: Button = itemView.findViewById(R.id.publishButton)
+        val editButton: Button = itemView.findViewById(R.id.editButton)
     }
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): DraftViewHolder {
@@ -48,6 +50,10 @@ class DraftRecipesAdapter(
 
         holder.publishButton.setOnClickListener {
             onPublishClick(recipe)
+        }
+
+        holder.editButton.setOnClickListener {
+            onEditClick(recipe)
         }
     }
 
